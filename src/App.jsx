@@ -14,7 +14,7 @@ import Home from "./pages/Home.jsx";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart.jsx";
 import Profile from "./pages/Profile.jsx";
-import PaymentPage from "./pages/Paymentpage.jsx";
+import PaymentPage from "./pages/PaymentPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import SupportPage from "./pages/SupportPage.jsx";
