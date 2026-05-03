@@ -21,7 +21,6 @@ import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import SupportPage from "./pages/SupportPage.jsx";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import LegalPage from "./pages/LegalPage.jsx";
-
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
   const location = useLocation();
