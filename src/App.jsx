@@ -20,7 +20,7 @@ import OrdersPage from "./pages/OrdersPage.jsx";
 import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import SupportPage from "./pages/SupportPage.jsx";
 import AdminSupportPage from "./pages/AdminSupportPage";
-import LegalPage from "./pages/LegalPage";
+import LegalPage from "./pages/LegalPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
