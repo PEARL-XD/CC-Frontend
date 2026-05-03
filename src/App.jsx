@@ -20,7 +20,8 @@ import OrdersPage from "./pages/OrdersPage.jsx";
 import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import SupportPage from "./pages/SupportPage.jsx";
 import AdminSupportPage from "./pages/AdminSupportPage";
-import LegalPage from "./pages/LegalPage";
+import Legalpage from "./pages/Legalpage.jsx";
+
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
   const location = useLocation();
@@ -74,7 +75,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/info" element={<LegalPage />} />
+          <Route path="/info" element={<Legalpage />} />
 
           <Route
             path="/profile"
