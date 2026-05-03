@@ -3,7 +3,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../contexts/CartContext.jsx";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;const SIZES = [250, 500, 750, 1000]; // grams
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const SIZES = [250, 500, 750, 1000]; // grams
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -57,7 +58,12 @@ export default function ProductDetail() {
   const incrementQuantity = () => setQuantity((q) => Math.min(q + 1, 10));
   const decrementQuantity = () => setQuantity((q) => Math.max(q - 1, 1));
 
-  const images = item?.gallery && item.gallery.length > 0 ? item.gallery : [item?.img];
+  // FIX: filter out undefined/null so broken images never reach <img src>
+  const images =
+    (item?.gallery?.length > 0 ? item.gallery : [item?.img]).filter(Boolean);
+
+  // Clamp activeImageIndex in case it's stale after a product change
+  const safeIndex = Math.min(activeImageIndex, Math.max(images.length - 1, 0));
 
   const handleAddToCart = () => {
     addItem({
@@ -85,13 +91,34 @@ export default function ProductDetail() {
         <div className="grid md:grid-cols-2 gap-12 items-start">
           {/* Left side: Image gallery */}
           <section>
-            <div className="overflow-hidden rounded-3xl shadow-lg mb-6">
+            <div className="overflow-hidden rounded-3xl shadow-lg mb-4">
               <img
-                src={images[activeImageIndex]}
-                alt={`${item.name} image`}
+                src={images[safeIndex] || "/placeholder.png"}
+                alt={`${item.name}`}
                 className="w-full h-[480px] object-cover transition-transform duration-300 ease-in-out"
               />
             </div>
+
+            {/* FIX: thumbnail strip — was tracked in state but never rendered */}
+            {images.length > 1 && (
+              <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                {images.map((src, i) => (
+                  <button
+                    key={src}
+                    onClick={() => setActiveImageIndex(i)}
+                    className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                      safeIndex === i ? "border-[#ef4444]" : "border-transparent"
+                    }`}
+                  >
+                    <img
+                      src={src}
+                      alt={`${item.name} thumbnail ${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Right side: Product info and purchase */}
@@ -213,7 +240,7 @@ export default function ProductDetail() {
                   className="rounded-lg shadow-md hover:shadow-xl transition-shadow bg-white flex flex-col"
                 >
                   <img
-                    src={suggestion.img}
+                    src={suggestion.img || "/placeholder.png"}
                     alt={suggestion.name}
                     className="w-full h-40 object-cover rounded-t-lg"
                   />
@@ -234,7 +261,6 @@ export default function ProductDetail() {
         </div>
       )}
 
-      {/* Toast fade animation */}
       <style>{`
         @keyframes fadeInOut {
           0%, 100% {opacity: 0; transform: translateY(10px);}

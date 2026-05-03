@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import { AuthContext } from "./contexts/AuthContext.jsx";
 import { CartProvider } from "./contexts/CartContext.jsx";
@@ -19,11 +20,44 @@ import OrdersPage from "./pages/OrdersPage.jsx";
 import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import SupportPage from "./pages/SupportPage.jsx";
 import AdminSupportPage from "./pages/AdminSupportPage";
+import LegalPage from "./pages/LegalPage";
 
-// 🔒 Protected Route Wrapper (only for critical pages)
 const ProtectedRoute = ({ children }) => {
-  const { accessToken } = useContext(AuthContext);
-  return accessToken ? children : <Navigate to="/login" />;
+  const { accessToken, loading } = useContext(AuthContext);
+  const location = useLocation();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!accessToken) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { accessToken, user, loading } = useContext(AuthContext);
+  const location = useLocation();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!accessToken) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (!user) {
+    return <div>Loading...</div>;
+  }
+
+  if (user.role !== "admin") {
+    return <Navigate to="/home" replace />;
+  }
+
+  return children;
 };
 
 function App() {
@@ -35,18 +69,41 @@ function App() {
     <CartProvider>
       <Router>
         <Routes>
-          {/* 🌐 Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/profile" element={<Profile />}/>
-          <Route path="/orderspage" element={ <OrdersPage />}/>
-          <Route path="/support" element={ <SupportPage />}/>
+          <Route path="/info" element={<LegalPage />} />
 
-            {/* 🔒 Protected Routes */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/orderspage"
+            element={
+              <ProtectedRoute>
+                <OrdersPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/support"
+            element={
+              <ProtectedRoute>
+                <SupportPage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/paymentpage"
             element={
@@ -55,26 +112,26 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/admin/orders"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <AdminOrdersPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
+
           <Route
             path="/admin/support"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <AdminSupportPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
 
-
-          {/* 🔁 Fallback */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </CartProvider>

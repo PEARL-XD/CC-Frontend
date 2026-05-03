@@ -1,12 +1,12 @@
 import React, { useEffect, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { motion } from "framer-motion";
-import Logo from "../components/Logo";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import Logo from "../assets/images/logo.png";
 
 // Validation schema with Yup
 const schema = yup.object().shape({
@@ -93,10 +93,8 @@ export default function Login() {
             className="flex flex-col justify-center p-10"
           >
             <div className="flex flex-col items-center gap-3 mb-8">
-              <Logo className="w-16 h-16" />
-              <h1 className="text-3xl font-extrabold text-[#E53935]">
-                CleanCuts
-              </h1>
+              <img src={Logo} alt="CleanChops Logo" className=" h-16 object-contain" />
+              
               <p className="text-sm text-gray-700">
                 Sign in to place your order
               </p>
@@ -167,7 +165,7 @@ export default function Login() {
             </form>
 
             <p className="text-center text-sm text-gray-600 mt-6">
-              New to CleanCuts?{" "}
+              New to CleanChops?{" "}
               <Link
                 to="/register"
                 className="text-orange-600 font-medium hover:underline"
@@ -177,8 +175,11 @@ export default function Login() {
             </p>
 
             <p className="mt-8 text-center text-xs text-gray-400">
-              By signing in you agree to our Terms & Privacy.
-            </p>
+  By signing in you agree to our{" "}
+  <Link to="/info" className="underline hover:text-gray-600">
+    Terms & Privacy
+  </Link>.
+</p>
           </motion.div>
 
         </div>

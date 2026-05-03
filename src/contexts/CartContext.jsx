@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext.jsx";
 
@@ -8,8 +8,11 @@ const CartContext = createContext(null);
 export function CartProvider({ children }) {
   const { user, accessToken } = useContext(AuthContext);
   const [cartItems, setCartItems] = useState([]);
+  // FIX: track in-flight requests to prevent race conditions between
+  // rapid optimistic updates (e.g. user tapping +/- quickly)
+  const [syncing, setSyncing] = useState(false);
 
-  /* ---------------- INIT (LOAD FROM BACKEND) ---------------- */
+  /* ---------------- INIT ---------------- */
 
   useEffect(() => {
     if (!user || !accessToken) {
@@ -24,9 +27,7 @@ export function CartProvider({ children }) {
         const { data } = await axios.get(`${API_BASE_URL}/api/cart`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        if (!cancelled) {
-          setCartItems(data.cart ?? []);
-        }
+        if (!cancelled) setCartItems(data.cart ?? []);
       } catch (err) {
         console.error("Failed to load cart:", err);
       }
@@ -38,45 +39,47 @@ export function CartProvider({ children }) {
 
   /* ---------------- HELPERS ---------------- */
 
-  // Always build headers fresh so stale closures never use an old token
-  const authHeaders = () =>
-    accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+  // FIX: wrapped in useCallback so consumers that list authHeaders as a
+  // dependency don't re-render on every render of CartProvider
+  const authHeaders = useCallback(
+    () => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    [accessToken]
+  );
 
   /* ---------------- MUTATIONS ---------------- */
 
-  const addItem = async (item) => {
-    // Only send the minimum needed — the server resolves price/name from the DB
+  const addItem = useCallback(async (item) => {
     const payload = {
       _id: item._id ?? item.id,
       selectedSize: Number(item.selectedSize),
       quantity: Number(item.quantity) || 1,
     };
 
-    // Optimistic update using local item data for instant UI feedback
+    // Optimistic update
     setCartItems((items) => {
       const idx = items.findIndex(
         (i) => i._id === payload._id && i.selectedSize === payload.selectedSize
       );
       if (idx !== -1) {
         const copy = [...items];
-        copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + payload.quantity };
+        // FIX: cap optimistic quantity at 10 to stay in sync with UI limits
+        const newQty = Math.min(copy[idx].quantity + payload.quantity, 10);
+        copy[idx] = { ...copy[idx], quantity: newQty };
         return copy;
       }
-      // Include display fields locally for optimistic render only
       return [...items, { ...payload, price: item.price, name: item.name, img: item.img }];
     });
 
     try {
       const { data } = await axios.post(
         `${API_BASE_URL}/api/cart/add`,
-        payload, // ← no price/name/img sent to server
+        payload,
         { headers: authHeaders() }
       );
-      // Reconcile with server truth (server-verified price/name)
       setCartItems(data.cart);
     } catch (err) {
       console.error("Add item failed:", err);
-      // Rollback optimistic update on failure
+      // Rollback
       setCartItems((items) => {
         const idx = items.findIndex(
           (i) => i._id === payload._id && i.selectedSize === payload.selectedSize
@@ -92,10 +95,9 @@ export function CartProvider({ children }) {
         return copy;
       });
     }
-  };
+  }, [authHeaders]);
 
-  const removeItem = async (_id, selectedSize) => {
-    // Snapshot for rollback
+  const removeItem = useCallback(async (_id, selectedSize) => {
     const snapshot = cartItems;
 
     setCartItems((items) =>
@@ -111,12 +113,12 @@ export function CartProvider({ children }) {
       setCartItems(data.cart);
     } catch (err) {
       console.error("Remove item failed:", err);
-      setCartItems(snapshot); // rollback
+      setCartItems(snapshot);
     }
-  };
+  }, [authHeaders, cartItems]);
 
-  const updateQuantity = async (_id, selectedSize, quantity) => {
-    if (quantity < 1) return;
+  const updateQuantity = useCallback(async (_id, selectedSize, quantity) => {
+    if (quantity < 1 || quantity > 10) return;
 
     const snapshot = cartItems;
 
@@ -125,6 +127,9 @@ export function CartProvider({ children }) {
         i._id === _id && i.selectedSize === selectedSize ? { ...i, quantity } : i
       )
     );
+
+    if (syncing) return;
+    setSyncing(true);
 
     try {
       const { data } = await axios.post(
@@ -135,26 +140,38 @@ export function CartProvider({ children }) {
       setCartItems(data.cart);
     } catch (err) {
       console.error("Update quantity failed:", err);
-      setCartItems(snapshot); // rollback
+      setCartItems(snapshot);
+    } finally {
+      setSyncing(false);
     }
-  };
+  }, [authHeaders, cartItems, syncing]);
 
-  const clearCart = async () => {
+  const clearCart = useCallback(async () => {
     const snapshot = cartItems;
     setCartItems([]);
 
     try {
-      await axios.post(`${API_BASE_URL}/api/cart/clear`, {}, { headers: authHeaders() });
+      await axios.post(
+        `${API_BASE_URL}/api/cart/clear`,
+        {},
+        { headers: authHeaders() }
+      );
     } catch (err) {
       console.error("Clear cart failed:", err);
-      setCartItems(snapshot); // rollback
+      setCartItems(snapshot);
     }
-  };
+  }, [authHeaders, cartItems]);
+
+  // FIX: memoize the context value object so it doesn't create a new reference
+  // on every render — this is what SonarLint S6481 warns about.
+  // Without this, every consumer re-renders even when nothing actually changed.
+  const contextValue = useMemo(
+    () => ({ cartItems, addItem, removeItem, updateQuantity, clearCart, syncing }),
+    [cartItems, addItem, removeItem, updateQuantity, clearCart, syncing]
+  );
 
   return (
-    <CartContext.Provider
-      value={{ cartItems, addItem, removeItem, updateQuantity, clearCart }}
-    >
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );

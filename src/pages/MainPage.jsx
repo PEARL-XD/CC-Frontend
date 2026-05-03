@@ -4,6 +4,7 @@ import cooked_image from "../assets/images/cooked.png";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../contexts/CartContext";
+import { WhatToExpect, AppDownloadBanner, Footer } from "./HomepageSections";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -226,6 +227,9 @@ export default function MainPage() {
         </div>
       </div>
 
+<WhatToExpect />
+<AppDownloadBanner />
+<Footer />
       {/* Toast notification */}
       <AnimatePresence>
         {showToast && (
@@ -234,7 +238,7 @@ export default function MainPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.3 }}
-            className="fixed bottom-6 right-6 md:right-12 bg-[#ef4444] text-white py-3 px-6 rounded shadow-lg z-50"
+            className="fixed bottom-6 right-6 md:right-12 bg-[#ef4444] text-whfite py-3 px-6 rounded shadow-lg z-50"
             role="status"
             aria-live="polite"
           >

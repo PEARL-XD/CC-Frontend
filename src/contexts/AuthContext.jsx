@@ -1,93 +1,145 @@
-import React, { createContext, useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 
 export const AuthContext = createContext();
 
-const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
+const REFRESH_INTERVAL = 15 * 60 * 1000;
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const isRefreshing = useRef(false); // Ref to lock refresh calls
 
-  const fetchUserProfile = useCallback(async () => {
-    if (!accessToken) {
-      setUser(null);
-      return;
-    }
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/me`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!response.ok) throw new Error("Failed to fetch user profile");
-      const data = await response.json();
-      setUser(data.user);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      setUser(null);
-    }
-  }, [accessToken]);
+  const isRefreshing = useRef(false);
+  const refreshIntervalRef = useRef(null);
+
+  const clearAuth = useCallback(() => {
+    setAccessToken(null);
+    setUser(null);
+  }, []);
+
+  const fetchUserProfile = useCallback(
+    async (tokenOverride) => {
+      const token = tokenOverride ?? accessToken;
+
+      if (!token) {
+        setUser(null);
+        return false;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+          return true;
+        }
+
+        if (response.status === 401 || response.status === 403) {
+          clearAuth();
+          return false;
+        }
+
+        console.error("Failed to fetch user profile:", response.statusText);
+        return false;
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        return false;
+      }
+    },
+    [accessToken, clearAuth]
+  );
 
   const fetchAccessToken = useCallback(async () => {
-    if (isRefreshing.current) return false; // Prevent concurrent refreshes
+    if (isRefreshing.current) return false;
     isRefreshing.current = true;
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/refresh-token`, {
         method: "POST",
-        credentials: "include", // send httpOnly cookie
+        credentials: "include",
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAccessToken(data.accessToken);
-        await fetchUserProfile();
+        const newToken = data.accessToken;
+
+        if (!newToken) {
+          clearAuth();
+          return false;
+        }
+
+        setAccessToken(newToken);
+        await fetchUserProfile(newToken);
         return true;
-      } else if (response.status === 401) {
-        console.info("User not authenticated (no refresh token).");
-        setAccessToken(null);
-        setUser(null);
-        return false;
-      } else {
-        console.error("Failed to refresh access token:", response.statusText);
-        setAccessToken(null);
-        setUser(null);
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        clearAuth();
         return false;
       }
+
+      console.error("Failed to refresh access token:", response.statusText);
+      clearAuth();
+      return false;
     } catch (error) {
       console.error("Network error during access token refresh:", error);
-      setAccessToken(null);
-      setUser(null);
+      clearAuth();
       return false;
     } finally {
       isRefreshing.current = false;
       setLoading(false);
     }
-  }, [fetchUserProfile]);
+  }, [clearAuth, fetchUserProfile]);
 
   useEffect(() => {
     fetchAccessToken();
   }, [fetchAccessToken]);
 
   useEffect(() => {
-    // Fetch user profile if accessToken changes (e.g., manual login)
-    if (accessToken) {
-      fetchUserProfile();
-    } else {
+    if (!accessToken) {
       setUser(null);
+      return;
     }
+
+    fetchUserProfile();
   }, [accessToken, fetchUserProfile]);
 
-  // Refresh access token proactively every REFRESH_INTERVAL ms
   useEffect(() => {
-    if (!accessToken) return;
-    const interval = setInterval(() => {
+    if (!accessToken) {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      return;
+    }
+
+    refreshIntervalRef.current = setInterval(() => {
       fetchAccessToken().then((success) => {
-        if (!success) clearInterval(interval);
+        if (!success && refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+          refreshIntervalRef.current = null;
+        }
       });
     }, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
   }, [accessToken, fetchAccessToken]);
 
   const logout = async () => {
@@ -97,14 +149,23 @@ export function AuthProvider({ children }) {
         credentials: "include",
       });
     } catch {
-      // Ignore network errors on logout
+      // Ignore logout network errors
     }
-    setAccessToken(null);
-    setUser(null);
+
+    clearAuth();
   };
 
   return (
-    <AuthContext.Provider value={{ accessToken, setAccessToken, user, setUser, loading, logout }}>
+    <AuthContext.Provider
+      value={{
+        accessToken,
+        setAccessToken,
+        user,
+        setUser,
+        loading,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

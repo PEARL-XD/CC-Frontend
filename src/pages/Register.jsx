@@ -1,12 +1,11 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
-import Logo from "../components/Logo";
 import { useNavigate, Link } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
-
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import Logo from "../assets/images/logo.png";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;const FLOOR_CONFIG = {
   // 'A2': 14,
 };
@@ -112,7 +111,8 @@ export default function Register() {
           className="max-w-md w-full bg-white bg-opacity-90 backdrop-blur-md rounded-3xl shadow-lg p-6 sm:p-10 border border-orange-200"
         >
           <div className="flex flex-col items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-            <Logo className="w-12 h-12 sm:w-16 sm:h-16" />
+                          <img src={Logo} alt="CleanChops Logo" className=" h-16 object-contain" />
+            
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#E53935]">Create Account</h1>
             <p className="text-xs sm:text-sm text-gray-700 text-center">
               Register to start ordering Fresh & Clean Chicken
@@ -251,9 +251,12 @@ export default function Register() {
             </Link>
           </p>
 
-          <p className="mt-6 sm:mt-8 text-center text-[10px] sm:text-xs text-gray-400">
-            By registering you agree to our Terms & Privacy.
-          </p>
+          <p className="mt-8 text-center text-xs text-gray-400">
+  By signing in you agree to our{" "}
+  <Link to="/info" className="underline hover:text-gray-600">
+    Terms & Privacy
+  </Link>.
+</p>
         </motion.div>
       </div>
     </>

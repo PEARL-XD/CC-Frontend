@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext, useCallback, useRef } from "rea
 import axios from "axios";
 import { AuthContext } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
-import AuthRequired from "../components/AuthRequired"; // ✅ added
+import AuthRequired from "../components/AuthRequired";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -25,6 +25,7 @@ function useOrdersLive(accessToken) {
   const intervalRef = useRef(null);
 
   const fetchOrders = useCallback(async () => {
+    if (!accessToken) return;
     try {
       const { data } = await axios.get(`${API_BASE_URL}/api/orders/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -32,6 +33,8 @@ function useOrdersLive(accessToken) {
       setOrders(data.orders || []);
       setErrorMsg("");
     } catch (err) {
+      console.log(err);
+      
       setErrorMsg("Failed to load orders");
     } finally {
       setLoading(false);
@@ -39,15 +42,28 @@ function useOrdersLive(accessToken) {
   }, [accessToken]);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
 
     fetchOrders();
 
+    // Poll every 10s only when tab is visible
     intervalRef.current = setInterval(() => {
       if (document.visibilityState === "visible") fetchOrders();
     }, 10000);
 
-    return () => clearInterval(intervalRef.current);
+    // FIX: immediately refetch when user returns to tab after being away
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchOrders();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalRef.current);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [accessToken, fetchOrders]);
 
   return { orders, loading, errorMsg };
@@ -59,12 +75,12 @@ function useOrdersLive(accessToken) {
 export default function OrdersPage() {
   const { accessToken } = useContext(AuthContext);
 
-  // ✅ FIX: no redirect, show UI instead
+  // FIX: hook is always called — no early return before it
+  const { orders, loading, errorMsg } = useOrdersLive(accessToken);
+
   if (!accessToken) {
     return <AuthRequired />;
   }
-
-  const { orders, loading, errorMsg } = useOrdersLive(accessToken);
 
   if (loading) {
     return (
@@ -134,21 +150,19 @@ export default function OrdersPage() {
 
               {/* ITEMS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t pt-3">
-                {order.items.map((item, i) => (
-                  <div key={i} className="flex gap-3 items-center">
+                {order.items.map((item) => (
+                  <div key={item._id || item.name} className="flex gap-3 items-center">
                     <img
                       src={item.img || "/placeholder.png"}
                       alt={item.name}
                       className="w-14 h-14 object-cover rounded-lg border"
                     />
-
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold truncate">{item.name}</div>
                       <div className="text-xs text-gray-500">
                         {item.selectedSize}g × {item.quantity}
                       </div>
                     </div>
-
                     <div className="font-semibold">
                       ₹{(item.price * item.quantity).toFixed(2)}
                     </div>

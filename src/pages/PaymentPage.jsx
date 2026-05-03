@@ -1,44 +1,45 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// FIX: load Razorpay script once on module level, not on button click
+const loadRazorpayScript = () => {
+  if (window.Razorpay) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { accessToken } = useContext(AuthContext);
-const { clearCart } = useCart();
+  const { accessToken, user } = useContext(AuthContext); // FIX: pull user for prefill
+  const { clearCart } = useCart();
 
   const [loading, setLoading] = useState(false);
 
   const { cartItems, schedule } = location.state || {};
 
   useEffect(() => {
-    // no cart -> go back
-    if (!cartItems || cartItems.length === 0) {
-      navigate("/cart");
-    }
+    if (!cartItems || cartItems.length === 0) navigate("/cart");
   }, [cartItems, navigate]);
 
   useEffect(() => {
-    // not logged in -> go to login
-    if (!accessToken) {
-      navigate("/login");
-    }
+    if (!accessToken) navigate("/login");
   }, [accessToken, navigate]);
 
-  const loadRazorpayScript = async () => {
-    if (window.Razorpay) return true;
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
+  // FIX: preload Razorpay script on mount so it's ready when user clicks Pay
+  useEffect(() => {
+    loadRazorpayScript();
+  }, []);
 
   const handlePayNow = async () => {
     try {
@@ -53,6 +54,7 @@ const { clearCart } = useCart();
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         alert("Razorpay failed to load. Check your connection.");
+        setLoading(false);
         return;
       }
 
@@ -63,13 +65,11 @@ const { clearCart } = useCart();
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      const {
-        razorpayKeyId,
-        amount,
-        currency,
-        razorpayOrderId,
-        localOrderId,
-      } = data;
+      const { razorpayKeyId, amount, currency, razorpayOrderId, localOrderId } = data;
+
+      // FIX: setLoading(false) here — the popup is open, button should be unfrozen.
+      // This is intentional: we don't want the button locked while user is in Razorpay UI.
+      setLoading(false);
 
       // 2. Open Razorpay checkout
       const options = {
@@ -79,54 +79,76 @@ const { clearCart } = useCart();
         order_id: razorpayOrderId,
         name: "CleanCuts",
         description: "Order Payment",
-        handler: async function (response) {
-  try {
-    await axios.post(
-      `${API_BASE_URL}/api/orders/verify`,
-      {
-        localOrderId,
-        razorpay_order_id: response.razorpay_order_id,
-        razorpay_payment_id: response.razorpay_payment_id,
-        razorpay_signature: response.razorpay_signature,
-      },
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-  } catch (err) {
-    console.error("Payment verification failed:", err.response?.data || err.message);
-    alert("Payment verification failed. Please contact support.");
-    return;
-  }
 
-  // ✅ clear cart AFTER successful verification
-  try {
-    clearCart();
-  } catch (e) {
-    console.warn("Cart clear failed (safe to ignore):", e);
-  }
-
-  navigate("/orderspage");
-},
+        // FIX: prefill from AuthContext user so checkout form is pre-filled
         prefill: {
-          name: "", // you can fill from user profile
-          contact: "",
+          name: user?.name || "",
+          contact: user?.phone || "",
+          email: user?.email || "",
         },
+
+        // FIX: handle user dismissing the popup without paying
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            // No alert needed — user intentionally closed it
+          },
+        },
+
+        handler: async function (response) {
+          try {
+            await axios.post(
+              `${API_BASE_URL}/api/orders/verify`,
+              {
+                localOrderId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+          } catch (err) {
+            console.error("Payment verification failed:", err.response?.data || err.message);
+            alert("Payment verification failed. Please contact support.");
+            return;
+          }
+
+          try {
+            clearCart();
+          } catch (e) {
+            console.warn("Cart clear failed (safe to ignore):", e);
+          }
+
+          navigate("/orderspage");
+        },
+
         theme: {
           color: "#E53935",
         },
-          method: {
-    upi: true,
-    card: true,
-    netbanking: true,
-    wallet: true,
-  },
+
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+        },
       };
 
       const razorpayInstance = new window.Razorpay(options);
+
+      // FIX: handle payment failure (declined card, UPI timeout, etc.)
+      razorpayInstance.on("payment.failed", (response) => {
+        console.error("Payment failed:", response.error);
+        alert(
+          `Payment failed: ${response.error.description || "Something went wrong. Please try again."}`
+        );
+        setLoading(false);
+      });
+
       razorpayInstance.open();
     } catch (err) {
       console.error("Payment initiation failed:", err.response?.data || err.message);
       alert("Payment initiation failed. Try again.");
-    } finally {
       setLoading(false);
     }
   };

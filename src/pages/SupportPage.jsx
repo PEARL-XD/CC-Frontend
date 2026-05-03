@@ -182,7 +182,6 @@ export default function SupportPage() {
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
       setSubmitted(true);
-      // Refresh tickets in background so tab 1 is up to date
       fetchTickets();
     } catch (err) {
       setSubmitError(err.response?.data?.error || "Failed to submit. Please try again.");
@@ -197,7 +196,7 @@ export default function SupportPage() {
     setDescription("");
     setPriority("Medium");
     setSubmitError("");
-    setActiveTab("tickets"); // go show them their new ticket
+    setActiveTab("tickets");
   };
 
   /* ── Tab bar ── */
@@ -262,7 +261,6 @@ export default function SupportPage() {
             <SuccessScreen onReset={handleReset} />
           ) : (
             <NewTicketForm
-              /* orders */
               pagedOrders={pagedOrders}
               allOrders={allOrders}
               ordersLoading={ordersLoading}
@@ -272,7 +270,6 @@ export default function SupportPage() {
               onPageChange={handlePageChange}
               onRetryOrders={fetchOrders}
               openTicketOrderIds={openTicketOrderIds}
-              /* form */
               selectedOrderId={selectedOrderId}
               setSelectedOrderId={setSelectedOrderId}
               selectedIssue={selectedIssue}
@@ -281,13 +278,33 @@ export default function SupportPage() {
               setPriority={setPriority}
               description={description}
               setDescription={setDescription}
-              /* submit */
               submitting={submitting}
               submitError={submitError}
               onSubmit={handleSubmit}
             />
           )
         )}
+
+        {/* ── General enquiry card ── */}
+        <div className="mt-8 border border-dashed border-gray-200 rounded-2xl p-5 flex items-start gap-4 bg-gray-50">
+          <div className="text-2xl mt-0.5">✉️</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-700 mb-0.5">
+              Got a suggestion or general complaint?
+            </p>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              For anything not related to a specific order — feedback, ideas, or concerns — drop us a mail and we'll get back to you.
+            </p>
+            <a
+              href="mailto:supportcleanchops@gmail.com"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              supportcleanchops@gmail.com
+              <span className="text-[10px]">↗</span>
+            </a>
+          </div>
+        </div>
+
       </div>
     </>
   );
@@ -356,7 +373,6 @@ function TicketCard({ ticket }) {
   const priorityStyle = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.Medium;
   const issueLabel = ISSUE_LABEL_MAP[ticket.issueType] || ticket.issueType;
 
-  // order is populated by the backend's .populate() call
   const order = ticket.order;
   const orderTotal = order?.totalAmount;
   const orderDate  = order?.createdAt;
@@ -364,7 +380,6 @@ function TicketCard({ ticket }) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      {/* Card header — always visible */}
       <button
         onClick={() => setExpanded((v) => !v)}
         className="w-full text-left p-4"
@@ -381,7 +396,6 @@ function TicketCard({ ticket }) {
               Raised {formatDate(ticket.createdAt)}
             </div>
           </div>
-
           <div className="flex items-center gap-2 shrink-0">
             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${priorityStyle.pill}`}>
               {priorityStyle.dot} {ticket.priority}
@@ -391,10 +405,8 @@ function TicketCard({ ticket }) {
         </div>
       </button>
 
-      {/* Expanded detail */}
       {expanded && (
         <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3">
-          {/* Description */}
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
               Your description
@@ -402,7 +414,6 @@ function TicketCard({ ticket }) {
             <p className="text-sm text-gray-700 leading-relaxed">{ticket.description}</p>
           </div>
 
-          {/* Order info */}
           {order && (
             <div className="bg-gray-50 rounded-xl p-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -427,7 +438,6 @@ function TicketCard({ ticket }) {
             </div>
           )}
 
-          {/* Ticket ID for reference */}
           <p className="text-xs text-gray-400">
             Ticket ref: <span className="font-mono">#{ticket._id.slice(-10)}</span>
           </p>
@@ -488,9 +498,9 @@ function NewTicketForm({
 
         <div className="space-y-2">
           {pagedOrders.map((order) => {
-            const isSelected  = selectedOrderId === order._id;
+            const isSelected    = selectedOrderId === order._id;
             const hasOpenTicket = openTicketOrderIds.has(order._id);
-            const statusClass = ORDER_STATUS_STYLES[order.orderStatus] || "bg-gray-100 text-gray-700";
+            const statusClass   = ORDER_STATUS_STYLES[order.orderStatus] || "bg-gray-100 text-gray-700";
 
             return (
               <label
@@ -514,7 +524,6 @@ function NewTicketForm({
                     <span className="font-semibold text-sm">
                       Order #{order._id.slice(-8)}
                     </span>
-                    {/* Open ticket indicator */}
                     {hasOpenTicket && (
                       <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold whitespace-nowrap">
                         Ticket open
@@ -537,7 +546,6 @@ function NewTicketForm({
           })}
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-3">
             <button
@@ -637,7 +645,6 @@ function NewTicketForm({
         </div>
       </section>
 
-      {/* ── Submit ── */}
       {submitError && <p className="text-red-500 text-sm -mt-2">{submitError}</p>}
       <button
         onClick={onSubmit}
