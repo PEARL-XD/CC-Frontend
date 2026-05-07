@@ -6,9 +6,10 @@ import { useCart } from "../contexts/CartContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// FIX: load Razorpay script once on module level, not on button click
+// Load Razorpay script once
 const loadRazorpayScript = () => {
   if (window.Razorpay) return Promise.resolve(true);
+
   return new Promise((resolve) => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -21,7 +22,7 @@ const loadRazorpayScript = () => {
 export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { accessToken, user } = useContext(AuthContext); // FIX: pull user for prefill
+  const { accessToken, user } = useContext(AuthContext);
   const { clearCart } = useCart();
 
   const [loading, setLoading] = useState(false);
@@ -29,17 +30,51 @@ export default function PaymentPage() {
   const { cartItems, schedule } = location.state || {};
 
   useEffect(() => {
-    if (!cartItems || cartItems.length === 0) navigate("/cart");
+    if (!cartItems || cartItems.length === 0) {
+      navigate("/cart");
+    }
   }, [cartItems, navigate]);
 
   useEffect(() => {
-    if (!accessToken) navigate("/login");
+    if (!accessToken) {
+      navigate("/login");
+    }
   }, [accessToken, navigate]);
 
-  // FIX: preload Razorpay script on mount so it's ready when user clicks Pay
   useEffect(() => {
     loadRazorpayScript();
   }, []);
+
+  const markPaymentFailed = async (localOrderId, paymentStatus = "FAILED") => {
+    if (!localOrderId || !accessToken) return false;
+
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/api/orders/payment-failed`,
+        { localOrderId, paymentStatus },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      console.log("payment-failed response:", res.data);
+      return true;
+    } catch (err) {
+      console.error(
+        "Failed to mark order as payment-failed:",
+        err.response?.data || err.message
+      );
+      return false;
+    }
+  };
+
+  const goToOrdersAfterFailure = async (localOrderId, paymentStatus, message) => {
+    await markPaymentFailed(localOrderId, paymentStatus);
+
+    if (message) {
+      alert(message);
+    }
+
+    navigate("/orderspage");
+  };
 
   const handlePayNow = async () => {
     try {
@@ -58,20 +93,24 @@ export default function PaymentPage() {
         return;
       }
 
-      // 1. Create order on backend
       const { data } = await axios.post(
         `${API_BASE_URL}/api/orders/create`,
         { cartItems, schedule },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      const { razorpayKeyId, amount, currency, razorpayOrderId, localOrderId } = data;
+      const {
+        razorpayKeyId,
+        amount,
+        currency,
+        razorpayOrderId,
+        localOrderId,
+      } = data;
 
-      // FIX: setLoading(false) here — the popup is open, button should be unfrozen.
-      // This is intentional: we don't want the button locked while user is in Razorpay UI.
       setLoading(false);
 
-      // 2. Open Razorpay checkout
+      let paymentHandled = false;
+
       const options = {
         key: razorpayKeyId,
         amount,
@@ -79,23 +118,28 @@ export default function PaymentPage() {
         order_id: razorpayOrderId,
         name: "CleanCuts",
         description: "Order Payment",
-
-        // FIX: prefill from AuthContext user so checkout form is pre-filled
         prefill: {
           name: user?.name || "",
           contact: user?.phone || "",
           email: user?.email || "",
         },
-
-        // FIX: handle user dismissing the popup without paying
         modal: {
-          ondismiss: () => {
+          ondismiss: async () => {
+            if (paymentHandled) return;
+            paymentHandled = true;
             setLoading(false);
-            // No alert needed — user intentionally closed it
+
+            await goToOrdersAfterFailure(
+              localOrderId,
+              "CANCELLED",
+              "Payment was cancelled."
+            );
           },
         },
-
         handler: async function (response) {
+          if (paymentHandled) return;
+          paymentHandled = true;
+
           try {
             await axios.post(
               `${API_BASE_URL}/api/orders/verify`,
@@ -108,24 +152,30 @@ export default function PaymentPage() {
               { headers: { Authorization: `Bearer ${accessToken}` } }
             );
           } catch (err) {
-            console.error("Payment verification failed:", err.response?.data || err.message);
-            alert("Payment verification failed. Please contact support.");
+            console.error(
+              "Payment verification failed:",
+              err.response?.data || err.message
+            );
+
+            await goToOrdersAfterFailure(
+              localOrderId,
+              "FAILED",
+              "Payment verification failed. Please contact support."
+            );
             return;
           }
 
           try {
-            clearCart();
+            await clearCart();
           } catch (e) {
             console.warn("Cart clear failed (safe to ignore):", e);
           }
 
           navigate("/orderspage");
         },
-
         theme: {
           color: "#E53935",
         },
-
         method: {
           upi: true,
           card: true,
@@ -136,18 +186,29 @@ export default function PaymentPage() {
 
       const razorpayInstance = new window.Razorpay(options);
 
-      // FIX: handle payment failure (declined card, UPI timeout, etc.)
-      razorpayInstance.on("payment.failed", (response) => {
+      razorpayInstance.on("payment.failed", async (response) => {
+        if (paymentHandled) return;
+        paymentHandled = true;
+
         console.error("Payment failed:", response.error);
-        alert(
-          `Payment failed: ${response.error.description || "Something went wrong. Please try again."}`
-        );
         setLoading(false);
+
+        await goToOrdersAfterFailure(
+          localOrderId,
+          "FAILED",
+          `Payment failed: ${
+            response.error.description ||
+            "Something went wrong. Please try again."
+          }`
+        );
       });
 
       razorpayInstance.open();
     } catch (err) {
-      console.error("Payment initiation failed:", err.response?.data || err.message);
+      console.error(
+        "Payment initiation failed:",
+        err.response?.data || err.message
+      );
       alert("Payment initiation failed. Try again.");
       setLoading(false);
     }
@@ -155,7 +216,10 @@ export default function PaymentPage() {
 
   if (!cartItems || !accessToken) return null;
 
-  const total = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const total = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -163,7 +227,10 @@ export default function PaymentPage() {
 
       <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-2">
         {cartItems.map((item) => (
-          <div key={`${item._id}-${item.selectedSize}`} className="flex justify-between text-sm">
+          <div
+            key={`${item._id}-${item.selectedSize}`}
+            className="flex justify-between text-sm"
+          >
             <span>
               {item.name} ({item.selectedSize}g × {item.quantity})
             </span>

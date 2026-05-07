@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
@@ -6,10 +6,26 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import Logo from "../assets/images/logo.png";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;const FLOOR_CONFIG = {
-  // 'A2': 14,
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const FLOOR_CONFIG = {
+  // A2: 14,
 };
 const DEFAULT_MAX_FLOOR = 14;
+
+const SOCIETY_OPTIONS = {
+  "Indraprastha, Ghaziabad": [
+    "Bharat City",
+    "Delhi-99",
+    "G.D.A Society, Pocket-D",
+  ],
+  "Gagan Vihar, Sahibabad, Ghaziabad": [
+    "Oxy Homez",
+    "K10 Koyal Enclave",
+    "Planet One",
+  ],
+};
 
 function generateTowers() {
   const arr = [];
@@ -24,20 +40,25 @@ function generateTowers() {
 
 const towers = generateTowers();
 
-// Build Yup validation schema considering your custom flat validation
 const schema = yup.object().shape({
   name: yup.string().required("Name is required").min(2, "Name must be at least 2 characters"),
-  email: yup.string().required("Enter a valid email address").email(),
-  phone: yup.string().required("Enter a valid 10-digit phone number").matches(/^\d{10}$/, "Enter a valid 10-digit phone number"),
-  password: yup.string().required("Password must be at least 8 characters").min(8),
-  confirmPassword: yup.string()
-    .oneOf([yup.ref('password'), null], "Passwords do not match")
+  email: yup.string().required("Enter a valid email address").email("Enter a valid email address"),
+  phone: yup
+    .string()
+    .required("Enter a valid 10-digit phone number")
+    .matches(/^\d{10}$/, "Enter a valid 10-digit phone number"),
+  password: yup.string().required("Password must be at least 8 characters").min(8, "Password must be at least 8 characters"),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref("password"), null], "Passwords do not match")
     .required("Confirm Password is required"),
+  society: yup.string().required("Please select your society"),
   tower: yup.string().required("Tower is required"),
-  flat: yup.string()
+  flat: yup
+    .string()
     .required("Flat must be 4 digits (floor + unit), e.g. 1205")
     .matches(/^\d{4}$/, "Flat must be 4 digits (e.g. 1205)")
-    .test('flat-valid', 'Invalid flat number', function(value) {
+    .test("flat-valid", "Invalid flat number", function (value) {
       if (!value) return false;
       const floor = parseInt(value.slice(0, 2), 10);
       const unit = parseInt(value.slice(2), 10);
@@ -48,8 +69,14 @@ const schema = yup.object().shape({
     }),
 });
 
+const allSocieties = Object.entries(SOCIETY_OPTIONS).flatMap(([locality, societies]) =>
+  societies.map((society) => ({ locality, society }))
+);
+
 export default function Register() {
   const navigate = useNavigate();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     document.body.classList.add("no-scroll");
@@ -59,14 +86,35 @@ export default function Register() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: yupResolver(schema),
     mode: "onBlur",
     defaultValues: {
-      tower: "A1"
-    }
+      society: "",
+      tower: "A1",
+    },
   });
+
+  const selectedSociety = watch("society");
+
+  const selectedSocietyMeta = useMemo(
+    () => allSocieties.find((item) => item.society === selectedSociety),
+    [selectedSociety]
+  );
+
+  const filteredSocieties = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allSocieties;
+    return allSocieties.filter(
+      (item) =>
+        item.society.toLowerCase().includes(q) ||
+        item.locality.toLowerCase().includes(q)
+    );
+  }, [search]);
 
   const onSubmit = async (data) => {
     try {
@@ -78,6 +126,7 @@ export default function Register() {
           email: data.email,
           phone: data.phone,
           password: data.password,
+          society: data.society,
           tower: data.tower,
           flat: data.flat,
         }),
@@ -99,6 +148,13 @@ export default function Register() {
     }
   };
 
+  const handleSocietySelect = async (society) => {
+    setValue("society", society, { shouldValidate: true, shouldDirty: true });
+    setPickerOpen(false);
+    setSearch("");
+    await trigger("society");
+  };
+
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
@@ -111,8 +167,7 @@ export default function Register() {
           className="max-w-md w-full bg-white bg-opacity-90 backdrop-blur-md rounded-3xl shadow-lg p-6 sm:p-10 border border-orange-200"
         >
           <div className="flex flex-col items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-                          <img src={Logo} alt="CleanChops Logo" className=" h-16 object-contain" />
-            
+            <img src={Logo} alt="CleanChops Logo" className="h-16 object-contain" />
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#E53935]">Create Account</h1>
             <p className="text-xs sm:text-sm text-gray-700 text-center">
               Register to start ordering Fresh & Clean Chicken
@@ -120,21 +175,22 @@ export default function Register() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-          <div>
-  <label htmlFor="name" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-    Name
-  </label>
-  <input
-    id="name"
-    {...register("name")}
-    type="text"
-    placeholder="Enter your name"
-    className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
-      errors.name ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-    }`}
-  />
-  {errors.name && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.name.message}</p>}
-</div>
+            <div>
+              <label htmlFor="name" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+                Name
+              </label>
+              <input
+                id="name"
+                {...register("name")}
+                type="text"
+                placeholder="Enter your name"
+                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                  errors.name ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
+                }`}
+              />
+              {errors.name && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.name.message}</p>}
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
                 Email Address
@@ -197,7 +253,43 @@ export default function Register() {
                   errors.confirmPassword ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
                 }`}
               />
-              {errors.confirmPassword && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.confirmPassword.message}</p>}
+              {errors.confirmPassword && (
+                <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+                Select Your Society
+              </label>
+
+              <input type="hidden" {...register("society")} />
+
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition focus:outline-none focus:ring-4 ${
+                  errors.society ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={`text-sm sm:text-base ${selectedSociety ? "text-gray-800" : "text-gray-400"}`}>
+                      {selectedSociety || "Choose your society"}
+                    </p>
+                    {selectedSocietyMeta && (
+                      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">
+                        {selectedSocietyMeta.locality}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-gray-400 text-sm">▼</span>
+                </div>
+              </button>
+
+              {errors.society && (
+                <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.society.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -216,6 +308,7 @@ export default function Register() {
                     </option>
                   ))}
                 </select>
+                {errors.tower && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.tower.message}</p>}
               </div>
 
               <div>
@@ -252,13 +345,70 @@ export default function Register() {
           </p>
 
           <p className="mt-8 text-center text-xs text-gray-400">
-  By signing in you agree to our{" "}
-  <Link to="/info" className="underline hover:text-gray-600">
-    Terms & Privacy
-  </Link>.
-</p>
+            By signing in you agree to our{" "}
+            <Link to="/info" className="underline hover:text-gray-600">
+              Terms & Privacy
+            </Link>.
+          </p>
         </motion.div>
       </div>
+
+      {pickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-orange-100 overflow-hidden">
+            <div className="px-5 py-4 border-b border-orange-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-extrabold text-gray-900">Select your society</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Search by society or locality</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPickerOpen(false);
+                  setSearch("");
+                }}
+                className="text-gray-400 hover:text-gray-700 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-4">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search society..."
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-300"
+              />
+            </div>
+
+            <div className="max-h-[360px] overflow-y-auto px-4 pb-4">
+              {filteredSocieties.length === 0 ? (
+                <div className="py-10 text-center text-sm text-gray-500">No society found</div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredSocieties.map((item) => (
+                    <button
+                      key={`${item.locality}-${item.society}`}
+                      type="button"
+                      onClick={() => handleSocietySelect(item.society)}
+                      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                        selectedSociety === item.society
+                          ? "border-orange-300 bg-orange-50"
+                          : "border-gray-200 hover:border-orange-200 hover:bg-orange-50/40"
+                      }`}
+                    >
+                      <div className="font-semibold text-gray-900">{item.society}</div>
+                      <div className="text-xs text-gray-500 mt-1">{item.locality}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

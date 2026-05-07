@@ -15,6 +15,13 @@ const statusStyles = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 
+const paymentStyles = {
+  PAID: "bg-green-100 text-green-700",
+  PENDING: "bg-yellow-100 text-yellow-700",
+  FAILED: "bg-red-100 text-red-700",
+  CANCELLED: "bg-red-100 text-red-700",
+};
+
 /* ================================
    DATA HOOK
 ================================ */
@@ -26,6 +33,7 @@ function useOrdersLive(accessToken) {
 
   const fetchOrders = useCallback(async () => {
     if (!accessToken) return;
+
     try {
       const { data } = await axios.get(`${API_BASE_URL}/api/orders/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -34,7 +42,6 @@ function useOrdersLive(accessToken) {
       setErrorMsg("");
     } catch (err) {
       console.log(err);
-      
       setErrorMsg("Failed to load orders");
     } finally {
       setLoading(false);
@@ -49,15 +56,18 @@ function useOrdersLive(accessToken) {
 
     fetchOrders();
 
-    // Poll every 10s only when tab is visible
     intervalRef.current = setInterval(() => {
-      if (document.visibilityState === "visible") fetchOrders();
+      if (document.visibilityState === "visible") {
+        fetchOrders();
+      }
     }, 10000);
 
-    // FIX: immediately refetch when user returns to tab after being away
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") fetchOrders();
+      if (document.visibilityState === "visible") {
+        fetchOrders();
+      }
     };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
@@ -74,8 +84,6 @@ function useOrdersLive(accessToken) {
 ================================ */
 export default function OrdersPage() {
   const { accessToken } = useContext(AuthContext);
-
-  // FIX: hook is always called — no early return before it
   const { orders, loading, errorMsg } = useOrdersLive(accessToken);
 
   if (!accessToken) {
@@ -122,12 +130,14 @@ export default function OrdersPage() {
           const statusClass =
             statusStyles[order.orderStatus] || "bg-gray-100 text-gray-700";
 
+          const paymentClass =
+            paymentStyles[order.paymentStatus] || "bg-gray-100 text-gray-700";
+
           return (
             <div
               key={order._id}
               className="bg-white border rounded-2xl shadow-sm p-4 space-y-4"
             >
-              {/* HEADER */}
               <div className="flex justify-between items-start flex-wrap gap-2">
                 <div>
                   <div className="text-xs text-gray-400">
@@ -142,16 +152,18 @@ export default function OrdersPage() {
                   <span className={`px-3 py-1 text-xs rounded-full ${statusClass}`}>
                     {order.orderStatus.replace(/_/g, " ")}
                   </span>
-                  <span className="px-3 py-1 text-xs rounded-full bg-gray-100">
+                  <span className={`px-3 py-1 text-xs rounded-full ${paymentClass}`}>
                     {order.paymentStatus}
                   </span>
                 </div>
               </div>
 
-              {/* ITEMS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t pt-3">
                 {order.items.map((item) => (
-                  <div key={item._id || item.name} className="flex gap-3 items-center">
+                  <div
+                    key={item._id || item.name}
+                    className="flex gap-3 items-center"
+                  >
                     <img
                       src={item.img || "/placeholder.png"}
                       alt={item.name}
@@ -170,7 +182,6 @@ export default function OrdersPage() {
                 ))}
               </div>
 
-              {/* FOOTER */}
               <div className="flex justify-between items-center pt-3 border-t">
                 <span className="text-xs text-gray-500">
                   Updated {new Date(order.updatedAt).toLocaleString()}

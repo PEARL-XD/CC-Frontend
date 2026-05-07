@@ -21,6 +21,7 @@ import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import SupportPage from "./pages/SupportPage.jsx";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import Legalpage from "./pages/Legalpage.jsx";
+import EditProfile from "./pages/EditProfile.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
@@ -82,6 +83,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edit-profile"
+            element={
+              <ProtectedRoute>
+                <EditProfile />
               </ProtectedRoute>
             }
           />
