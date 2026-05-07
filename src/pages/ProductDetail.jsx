@@ -48,6 +48,8 @@ export default function ProductDetail() {
       .catch(() => setSuggestionsLoading(false));
   }, [id]);
 
+  const isOutOfStock = item?.isOutOfStock === true;
+
   const unitPrice = ((item?.price || 0) * selectedSize) / 1000;
   const totalPrice = unitPrice * quantity;
   const totalWeight = selectedSize * quantity;
@@ -66,6 +68,7 @@ export default function ProductDetail() {
   const safeIndex = Math.min(activeImageIndex, Math.max(images.length - 1, 0));
 
   const handleAddToCart = () => {
+    if (!item || isOutOfStock) return; // guard: prevent add if out of stock
     addItem({
       _id: item._id,
       name: item.name,
@@ -125,7 +128,14 @@ export default function ProductDetail() {
           <section className="flex flex-col justify-between">
             <div>
               <h1 className="text-5xl font-extrabold mb-2 text-gray-900">{item.name}</h1>
-              <p className="text-lg text-gray-500 mb-6">{item.category}</p>
+              <p className="text-lg text-gray-500 mb-4">{item.category}</p>
+
+              {/* Out of stock badge */}
+              {isOutOfStock && (
+                <div className="mb-4 inline-flex px-3 py-1 rounded-full bg-red-100 text-red-700 font-semibold text-sm">
+                  Out of stock
+                </div>
+              )}
 
               <div className="mb-6 flex items-center gap-6">
                 <span className="text-4xl font-bold text-[#ef4444]">₹{unitPrice.toFixed(2)}</span>
@@ -152,11 +162,15 @@ export default function ProductDetail() {
                     <button
                       key={size}
                       className={`px-4 py-2 rounded-full font-semibold ${
-                        selectedSize === size
+                        isOutOfStock
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : selectedSize === size
                           ? "bg-gradient-to-r from-[#fb923c] to-[#ef4444] text-white"
                           : "bg-gray-100 text-gray-800"
                       }`}
-                      onClick={() => setSelectedSize(size)}
+                      onClick={() => {
+                        if (!isOutOfStock) setSelectedSize(size);
+                      }}
                     >
                       {size}g
                     </button>
@@ -172,7 +186,10 @@ export default function ProductDetail() {
                 <div className="flex items-center space-x-3 border rounded-lg px-4 py-2 w-max">
                   <button
                     onClick={decrementQuantity}
-                    className="text-[#ef4444] font-bold text-2xl focus:outline-none"
+                    disabled={isOutOfStock}
+                    className={`font-bold text-2xl focus:outline-none ${
+                      isOutOfStock ? "text-gray-300 cursor-not-allowed" : "text-[#ef4444]"
+                    }`}
                     aria-label="Decrease quantity"
                   >
                     −
@@ -186,7 +203,10 @@ export default function ProductDetail() {
                   />
                   <button
                     onClick={incrementQuantity}
-                    className="text-[#ef4444] font-bold text-2xl focus:outline-none"
+                    disabled={isOutOfStock}
+                    className={`font-bold text-2xl focus:outline-none ${
+                      isOutOfStock ? "text-gray-300 cursor-not-allowed" : "text-[#ef4444]"
+                    }`}
                     aria-label="Increase quantity"
                   >
                     +
@@ -217,9 +237,14 @@ export default function ProductDetail() {
             {/* Add to cart button */}
             <button
               onClick={handleAddToCart}
-              className="sticky bottom-0 w-full md:w-auto bg-gradient-to-r from-[#fb923c] to-[#ef4444] text-white py-4 rounded-full font-bold text-xl shadow-lg hover:scale-105 transition-transform"
+              disabled={isOutOfStock}
+              className={`sticky bottom-0 w-full md:w-auto py-4 rounded-full font-bold text-xl shadow-lg transition-transform ${
+                isOutOfStock
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[#fb923c] to-[#ef4444] text-white hover:scale-105"
+              }`}
             >
-              Add to Cart
+              {isOutOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
           </section>
         </div>

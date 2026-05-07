@@ -55,11 +55,12 @@ export default function MainPage() {
   // Add to cart with a sensible default size (1000g) and quantity 1
   const addToCartHandler = (item) => {
     if (!item) return;
+    if (item?.isOutOfStock) return; // prevent add-to-cart if out of stock
+
     const key = `${item._id || item.id}-${1000}`; // key uses id + selectedSize (1000g default)
 
     // If this item is currently pending addition, ignore duplicate clicks
     if (pendingAddsRef.current.has(key)) {
-      // optionally we could flash the toast or show a subtle feedback here
       return;
     }
 
@@ -152,6 +153,7 @@ export default function MainPage() {
           {currentSection.articles.map((item, idx) => {
             const key = `${item._id || item.id}-1000`;
             const isPending = pendingAddsRef.current.has(key);
+            const isOutOfStock = item.isOutOfStock === true;
 
             return (
               <motion.article
@@ -163,7 +165,9 @@ export default function MainPage() {
                 whileHover="hover"
                 variants={cardVariants}
                 transition={{ duration: 0.18 }}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md overflow-hidden flex flex-col relative"
+                className={`bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col relative ${
+                  isOutOfStock ? "opacity-60 grayscale" : "hover:shadow-md"
+                }`}
               >
                 {/* Product Image and Plus Icon overlay */}
                 <div className="relative rounded-t-xl overflow-hidden">
@@ -174,15 +178,26 @@ export default function MainPage() {
                     loading="lazy"
                   />
 
+                  {/* Out of stock overlay */}
+                  {isOutOfStock && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10">
+                      <span className="px-3 py-1 rounded-full bg-white text-red-600 font-bold text-sm shadow">
+                        Out of stock
+                      </span>
+                    </div>
+                  )}
+
                   {/* plus button - accessible */}
                   <button
                     title={`Add ${item.name} to cart`}
-                    className={`absolute bottom-3 right-3 bg-white border border-orange-200 shadow rounded-full w-9 h-9 flex justify-center items-center transition transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-orange-200 ${
-                      isPending ? "opacity-60 pointer-events-none" : "hover:bg-orange-50"
+                    className={`absolute bottom-3 right-3 bg-white border border-orange-200 shadow rounded-full w-9 h-9 flex justify-center items-center transition transform focus:outline-none focus:ring-2 focus:ring-orange-200 ${
+                      isPending || isOutOfStock
+                        ? "opacity-60 pointer-events-none"
+                        : "hover:bg-orange-50 hover:-translate-y-0.5"
                     }`}
                     onClick={() => addToCartHandler(item)}
                     aria-label={`Add ${item.name} to cart`}
-                    aria-disabled={isPending}
+                    aria-disabled={isPending || isOutOfStock}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -213,10 +228,17 @@ export default function MainPage() {
 
                     <div className="flex items-center gap-2">
                       <button
-                        className="px-3 py-1 rounded-md bg-white border border-gray-200 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                        onClick={() => navigate(`/product/${item._id || item.id}`)}
+                        disabled={isOutOfStock}
+                        className={`px-3 py-1 rounded-md border shadow-sm text-sm font-medium transition ${
+                          isOutOfStock
+                            ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                        }`}
+                        onClick={() => {
+                          if (!isOutOfStock) navigate(`/product/${item._id || item.id}`);
+                        }}
                       >
-                        Customize
+                        {isOutOfStock ? "Out of stock" : "Customize"}
                       </button>
                     </div>
                   </div>
@@ -227,9 +249,10 @@ export default function MainPage() {
         </div>
       </div>
 
-<WhatToExpect />
-<AppDownloadBanner />
-<Footer />
+      <WhatToExpect />
+      <AppDownloadBanner />
+      <Footer />
+
       {/* Toast notification */}
       <AnimatePresence>
         {showToast && (
@@ -238,7 +261,7 @@ export default function MainPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.3 }}
-            className="fixed bottom-6 right-6 md:right-12 bg-[#ef4444] text-whfite py-3 px-6 rounded shadow-lg z-50"
+            className="fixed bottom-6 right-6 md:right-12 bg-[#ef4444] text-white py-3 px-6 rounded shadow-lg z-50"
             role="status"
             aria-live="polite"
           >
