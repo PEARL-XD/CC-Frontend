@@ -22,6 +22,12 @@ const paymentStyles = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 
+const deliveryBadgeStyles = {
+  normal: "bg-green-100 text-green-700",
+  schedule: "bg-orange-100 text-orange-700",
+  silent: "bg-red-100 text-red-700",
+};
+
 /* ================================
    DATA HOOK
 ================================ */
@@ -133,6 +139,9 @@ export default function OrdersPage() {
           const paymentClass =
             paymentStyles[order.paymentStatus] || "bg-gray-100 text-gray-700";
 
+          const hasSchedule = Boolean(order.schedule);
+          const hasSilentDelivery = order.silentDelivery === true;
+
           return (
             <div
               key={order._id}
@@ -156,6 +165,30 @@ export default function OrdersPage() {
                     {order.paymentStatus}
                   </span>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 border-t pt-3">
+                {hasSchedule ? (
+                  <span
+                    className={`px-3 py-1 text-xs rounded-full ${deliveryBadgeStyles.schedule}`}
+                  >
+                    {order.schedule}
+                  </span>
+                ) : (
+                  <span
+                    className={`px-3 py-1 text-xs rounded-full ${deliveryBadgeStyles.normal}`}
+                  >
+                    Normal delivery
+                  </span>
+                )}
+
+                {hasSilentDelivery && (
+                  <span
+                    className={`px-3 py-1 text-xs rounded-full ${deliveryBadgeStyles.silent}`}
+                  >
+                    Silent delivery
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t pt-3">

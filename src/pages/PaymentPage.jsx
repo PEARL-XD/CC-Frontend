@@ -27,7 +27,7 @@ export default function PaymentPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const { cartItems, schedule } = location.state || {};
+  const { cartItems, schedule, silentDelivery } = location.state || {};
 
   useEffect(() => {
     if (!cartItems || cartItems.length === 0) {
@@ -66,7 +66,11 @@ export default function PaymentPage() {
     }
   };
 
-  const goToOrdersAfterFailure = async (localOrderId, paymentStatus, message) => {
+  const goToOrdersAfterFailure = async (
+    localOrderId,
+    paymentStatus,
+    message
+  ) => {
     await markPaymentFailed(localOrderId, paymentStatus);
 
     if (message) {
@@ -95,7 +99,7 @@ export default function PaymentPage() {
 
       const { data } = await axios.post(
         `${API_BASE_URL}/api/orders/create`,
-        { cartItems, schedule },
+        { cartItems, schedule, silentDelivery },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
@@ -240,8 +244,20 @@ export default function PaymentPage() {
       </div>
 
       {schedule && (
-        <p className="text-gray-600 mb-4">
+        <p className="text-gray-600 mb-3">
           <span className="font-semibold">Scheduled:</span> {schedule}
+        </p>
+      )}
+
+      {silentDelivery && (
+        <p className="text-gray-600 mb-3">
+          <span className="font-semibold">Delivery:</span> Silent delivery
+        </p>
+      )}
+
+      {!schedule && !silentDelivery && (
+        <p className="text-gray-600 mb-3">
+          <span className="font-semibold">Delivery:</span> Normal delivery
         </p>
       )}
 
