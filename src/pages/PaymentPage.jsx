@@ -97,11 +97,17 @@ export default function PaymentPage() {
         return;
       }
 
-      const { data } = await axios.post(
-        `${API_BASE_URL}/api/orders/create`,
-        { cartItems, schedule, silentDelivery },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
+    const orderCartItems = cartItems.map((item) => ({
+  _id: item._id,
+  selectedSize: Number(item.selectedSize),
+  quantity: Number(item.quantity),
+}));
+
+const { data } = await axios.post(
+  `${API_BASE_URL}/api/orders/create`,
+  { cartItems: orderCartItems, schedule, silentDelivery },
+  { headers: { Authorization: `Bearer ${accessToken}` } }
+);
 
       const {
         razorpayKeyId,
@@ -213,7 +219,7 @@ export default function PaymentPage() {
         "Payment initiation failed:",
         err.response?.data || err.message
       );
-      alert("Payment initiation failed. Try again.");
+alert(err.response?.data?.error || "Payment initiation failed. Try again.");
       setLoading(false);
     }
   };
