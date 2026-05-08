@@ -14,32 +14,34 @@ export default function MainPage() {
   const [index, setIndex] = useState(0);
   const [fade, setFade] = useState(true);
   const [showToast, setShowToast] = useState(false);
-  const { addItem } = useCart(); // <-- use global cart
+  const { addItem } = useCart();
 
-  // ref to track items that are currently being added (prevents double-add)
   const pendingAddsRef = useRef(new Set());
 
   useEffect(() => {
     let mounted = true;
+
     fetch(`${API_BASE_URL}/api/items`)
       .then((res) => res.json())
       .then((data) => {
         if (!mounted) return;
+
         const mappedSections = (Array.isArray(data) ? data : []).map((section) => ({
           ...section,
           image: section.title === "Uncooked" ? raw_image : cooked_image,
         }));
+
         setSections(mappedSections);
       })
       .catch((err) => {
         console.error("Failed to load items:", err);
       });
+
     return () => {
       mounted = false;
     };
   }, []);
 
-  // NOTE: auto-advance removed — user must click the CTA to change the banner
   const handleSlide = () => {
     setFade(false);
     setTimeout(() => {
@@ -52,54 +54,63 @@ export default function MainPage() {
     return <div className="text-center mt-16 text-xl">Loading items...</div>;
   }
 
-  // Add to cart with a sensible default size (1000g) and quantity 1
   const addToCartHandler = (item) => {
     if (!item) return;
-    if (item?.isOutOfStock) return; // prevent add-to-cart if out of stock
 
-    const key = `${item._id || item.id}-${1000}`; // key uses id + selectedSize (1000g default)
+    const isOutOfStock = item.isOutOfStock === true;
+    const isUnavailable =
+      item.isUnavailable === true ||
+      item.isCategoryDisabled === true ||
+      isOutOfStock;
 
-    // If this item is currently pending addition, ignore duplicate clicks
+    if (isUnavailable) return;
+
+    const key = `${item._id || item.id}-1000`;
+
     if (pendingAddsRef.current.has(key)) {
       return;
     }
 
-    // mark pending
     pendingAddsRef.current.add(key);
 
-    // prepare normalized item per your CartContext's validation
     const newCartItem = {
       _id: item._id || item.id,
       name: item.name || item.title || "Item",
-      price: Number(item.price) || 0, // CartContext expects price: number
-      selectedSize: 1000, // default 1000g
+      price: Number(item.price) || 0,
+      selectedSize: 1000,
       quantity: 1,
       img: item.img || item.image || "",
     };
 
     try {
-      addItem(newCartItem); // add to global cart (called only once per click)
+      addItem(newCartItem);
     } catch (err) {
       console.error("addItem failed:", err);
     }
 
-    // visual feedback
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
 
-    // release the lock after a short delay so user can add again if they really want to
-    const RELEASE_DELAY = 800; // milliseconds
     setTimeout(() => {
       pendingAddsRef.current.delete(key);
-    }, RELEASE_DELAY);
+    }, 800);
   };
 
-  const currentSection = sections[index] || { title: "", articles: [], image: raw_image };
+  const currentSection = sections[index] || {
+    title: "",
+    articles: [],
+    image: raw_image,
+  };
+
   const currentTitle = currentSection.title || "";
+  const isSectionDisabled = currentSection.isDisabled === true;
+  const disabledReason =
+    currentSection.disabledReason ||
+    "Cooked food is coming soon to your society.";
+
   const nextTitle = currentTitle === "Uncooked" ? "Cooked" : "Uncooked";
   const buttonLabel = `Looking for ${nextTitle}`;
 
-  // motion variants
   const cardVariants = {
     initial: { opacity: 0, y: 10, scale: 0.995 },
     animate: { opacity: 1, y: 0, scale: 1 },
@@ -109,7 +120,6 @@ export default function MainPage() {
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* Banner Carousel (manual only) */}
       <div
         className="relative w-full"
         style={{ height: "58vh", maxHeight: "600px" }}
@@ -130,10 +140,18 @@ export default function MainPage() {
               className="w-full h-full object-cover"
               loading="lazy"
             />
+
             <div className="absolute inset-0 bg-black bg-opacity-30" />
+
             <h2 className="absolute left-6 bottom-20 text-white text-4xl md:text-6xl font-extrabold drop-shadow-2xl select-none z-10">
               {currentSection.title}
             </h2>
+
+            {isSectionDisabled && (
+              <div className="absolute left-6 bottom-36 z-10 max-w-[90%] md:max-w-md rounded-full bg-white/95 px-4 py-2 text-sm md:text-base font-semibold text-[#ef4444] shadow-lg">
+                {disabledReason}
+              </div>
+            )}
 
             <button
               onClick={handleSlide}
@@ -147,13 +165,20 @@ export default function MainPage() {
         </AnimatePresence>
       </div>
 
-      {/* Articles Grid */}
       <div className="w-full max-w-7xl mx-auto my-10 px-4 md:px-6 xl:px-0">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {currentSection.articles.map((item, idx) => {
+          {(currentSection.articles || []).map((item, idx) => {
             const key = `${item._id || item.id}-1000`;
             const isPending = pendingAddsRef.current.has(key);
+
             const isOutOfStock = item.isOutOfStock === true;
+            const isUnavailable =
+              item.isUnavailable === true ||
+              item.isCategoryDisabled === true ||
+              isOutOfStock ||
+              isSectionDisabled;
+
+            const unavailableLabel = isOutOfStock ? "Out of stock" : "Coming soon";
 
             return (
               <motion.article
@@ -162,14 +187,13 @@ export default function MainPage() {
                 initial="initial"
                 animate="animate"
                 exit="exit"
-                whileHover="hover"
+                whileHover={isUnavailable ? undefined : "hover"}
                 variants={cardVariants}
                 transition={{ duration: 0.18 }}
                 className={`bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col relative ${
-                  isOutOfStock ? "opacity-60 grayscale" : "hover:shadow-md"
+                  isUnavailable ? "opacity-60 grayscale" : "hover:shadow-md"
                 }`}
               >
-                {/* Product Image and Plus Icon overlay */}
                 <div className="relative rounded-t-xl overflow-hidden">
                   <img
                     src={item.img}
@@ -178,26 +202,32 @@ export default function MainPage() {
                     loading="lazy"
                   />
 
-                  {/* Out of stock overlay */}
-                  {isOutOfStock && (
+                  {isUnavailable && (
                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10">
                       <span className="px-3 py-1 rounded-full bg-white text-red-600 font-bold text-sm shadow">
-                        Out of stock
+                        {unavailableLabel}
                       </span>
                     </div>
                   )}
 
-                  {/* plus button - accessible */}
                   <button
-                    title={`Add ${item.name} to cart`}
+                    title={
+                      isUnavailable
+                        ? unavailableLabel
+                        : `Add ${item.name} to cart`
+                    }
                     className={`absolute bottom-3 right-3 bg-white border border-orange-200 shadow rounded-full w-9 h-9 flex justify-center items-center transition transform focus:outline-none focus:ring-2 focus:ring-orange-200 ${
-                      isPending || isOutOfStock
+                      isPending || isUnavailable
                         ? "opacity-60 pointer-events-none"
                         : "hover:bg-orange-50 hover:-translate-y-0.5"
                     }`}
                     onClick={() => addToCartHandler(item)}
-                    aria-label={`Add ${item.name} to cart`}
-                    aria-disabled={isPending || isOutOfStock}
+                    aria-label={
+                      isUnavailable
+                        ? unavailableLabel
+                        : `Add ${item.name} to cart`
+                    }
+                    aria-disabled={isPending || isUnavailable}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -208,37 +238,52 @@ export default function MainPage() {
                       strokeWidth="2"
                       aria-hidden="true"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 5v14m7-7H5"
+                      />
                     </svg>
                   </button>
                 </div>
 
-                {/* Info Section */}
                 <div className="px-4 py-3 flex flex-col gap-2 flex-1">
                   <div className="text-lg font-semibold text-gray-900 line-clamp-2">
                     {item.name}
                   </div>
-                  {item.desc && <div className="text-xs text-gray-500 line-clamp-3">{item.desc}</div>}
+
+                  {item.desc && (
+                    <div className="text-xs text-gray-500 line-clamp-3">
+                      {item.desc}
+                    </div>
+                  )}
 
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="flex items-baseline gap-3">
-                      <span className="text-lg font-bold text-[#E53935]">₹{item.price}</span>
-                      <span className="text-sm text-gray-400 line-through">₹{item.oldprice || "199"}</span>
+                      <span className="text-lg font-bold text-[#E53935]">
+                        ₹{item.price}
+                      </span>
+
+                      <span className="text-sm text-gray-400 line-through">
+                        ₹{item.oldprice || "199"}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
-                        disabled={isOutOfStock}
+                        disabled={isUnavailable}
                         className={`px-3 py-1 rounded-md border shadow-sm text-sm font-medium transition ${
-                          isOutOfStock
+                          isUnavailable
                             ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
                             : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                         }`}
                         onClick={() => {
-                          if (!isOutOfStock) navigate(`/product/${item._id || item.id}`);
+                          if (!isUnavailable) {
+                            navigate(`/product/${item._id || item.id}`);
+                          }
                         }}
                       >
-                        {isOutOfStock ? "Out of stock" : "Customize"}
+                        {isUnavailable ? unavailableLabel : "Customize"}
                       </button>
                     </div>
                   </div>
@@ -253,7 +298,6 @@ export default function MainPage() {
       <AppDownloadBanner />
       <Footer />
 
-      {/* Toast notification */}
       <AnimatePresence>
         {showToast && (
           <motion.div

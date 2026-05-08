@@ -22,6 +22,7 @@ import SupportPage from "./pages/SupportPage.jsx";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import Legalpage from "./pages/Legalpage.jsx";
 import EditProfile from "./pages/EditProfile.jsx";
+import AdminInventoryPage from "./pages/AdminInventoryPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
@@ -127,6 +128,14 @@ function App() {
             element={
               <AdminRoute>
                 <AdminOrdersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/inventory"
+            element={
+              <AdminRoute>
+                <AdminInventoryPage />
               </AdminRoute>
             }
           />
