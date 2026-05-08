@@ -16,7 +16,6 @@ import logoSmall from "../assets/images/smalllogo.png";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "https://localhost:3443";
-const ADMIN_PHONE = import.meta.env.VITE_ADMIN_PHONE;
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 export default function Navbar() {
@@ -76,7 +75,7 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isAdmin = user?.phone === ADMIN_PHONE;
+  const isAdmin = user?.role === "admin";
 
   // ── Search state ──────────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -636,14 +635,24 @@ export default function Navbar() {
 
                     <div style={{ padding: "6px" }}>
                       {isAdmin && (
-                        <DropItem
-                          to="/admin/orders"
-                          label="Admin Panel"
-                          icon="⚡"
-                          accent={RED}
-                          onClick={() => setUserDropdownOpen(false)}
-                        />
+                        <>
+                          <DropItem
+                            to="/admin/orders"
+                            label="Admin Orders"
+                            icon="⚡"
+                            accent={RED}
+                            onClick={() => setUserDropdownOpen(false)}
+                          />
+                          <DropItem
+                            to="/admin/inventory"
+                            label="Admin Inventory"
+                            icon="📋"
+                            accent={RED}
+                            onClick={() => setUserDropdownOpen(false)}
+                          />
+                        </>
                       )}
+
                       <DropItem
                         to="/profile"
                         label="Profile"
