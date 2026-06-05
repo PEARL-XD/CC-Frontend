@@ -19,6 +19,7 @@ import PaymentPage from "./pages/PaymentPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import SupportPage from "./pages/SupportPage.jsx";
+import SupportPublicPage from "./pages/SupportPublicPage.jsx";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import Legalpage from "./pages/Legalpage.jsx";
 import EditProfile from "./pages/EditProfile.jsx";
@@ -60,6 +61,20 @@ const AdminRoute = ({ children }) => {
   }
 
   return children;
+};
+
+const SupportRoute = () => {
+  const { accessToken, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (accessToken) {
+    return <SupportPage />;
+  }
+
+  return <SupportPublicPage />;
 };
 
 function App() {
@@ -107,11 +122,7 @@ function App() {
 
           <Route
             path="/support"
-            element={
-              <ProtectedRoute>
-                <SupportPage />
-              </ProtectedRoute>
-            }
+            element={<SupportRoute />}
           />
 
           <Route
