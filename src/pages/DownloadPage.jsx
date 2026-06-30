@@ -4,7 +4,6 @@ import {
   ArrowRightIcon,
   DownloadIcon,
   ExternalLinkIcon,
-  QrcodeIcon,
   SparklesIcon,
 } from "@heroicons/react/outline";
 import LogoImage from "../assets/images/logo.png";
@@ -13,8 +12,6 @@ const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.cleanchops.app";
 const APP_STORE_URL = "https://apps.apple.com/in/app/clean-chops/id6773819709";
 const CANONICAL_DOWNLOAD_URL = "https://cleanchops.in/download";
-const QR_IMAGE_URL = "/download-qr.png";
-
 export default function DownloadPage() {
   useEffect(() => {
     const prevTitle = document.title;
@@ -26,7 +23,7 @@ export default function DownloadPage() {
     if (descriptionTag) {
       descriptionTag.setAttribute(
         "content",
-        "Scan the CleanChops QR to open the app on Android, iPhone, or web.",
+        "Download CleanChops to get fresh chicken delivery, fast checkout, and no hidden charges.",
       );
     }
 
@@ -53,7 +50,7 @@ export default function DownloadPage() {
           <div className="rounded-[36px] border border-white/70 bg-white/75 p-6 shadow-[0_28px_70px_rgba(0,0,0,0.12)] backdrop-blur-xl sm:p-8 lg:p-10">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#E53935]/12 bg-[#E53935]/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#7f1d1d]">
               <SparklesIcon className="h-4 w-4 text-[#E53935]" />
-              QR landing page
+              Fresh meat. Faster checkout.
             </div>
 
             <div className="mt-6 max-w-[480px]">
@@ -70,9 +67,9 @@ export default function DownloadPage() {
             </h1>
 
             <p className="mt-5 max-w-xl text-base leading-8 text-black/70 sm:text-lg">
-              Use this link on posters, society boards, flyers, and WhatsApp
-              shares. People can jump to the right store or continue on the web
-              without any extra steps.
+              Fresh, hygienic chicken delivered fast with clear pricing and no
+              hidden surprises. Choose the app store for your phone or continue
+              on the web right away.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -107,50 +104,41 @@ export default function DownloadPage() {
 
             <div className="mt-7 inline-flex items-center gap-2 rounded-2xl border border-black/8 bg-[#fff8f2] px-4 py-3 text-sm text-black/65">
               <ExternalLinkIcon className="h-4 w-4 text-[#E53935]" />
-              <span className="font-semibold text-black/80">cleanchops.in/download</span>
-              <span className="hidden sm:inline">works as the single share link</span>
+              <span className="font-semibold text-black/80">Fresh, reliable, simple.</span>
+              <span className="hidden sm:inline">Built for quick ordering from mobile or web.</span>
             </div>
           </div>
 
           <div className="flex items-center lg:justify-end">
             <div className="w-full max-w-[560px] rounded-[36px] border border-white/80 bg-white/88 p-6 shadow-[0_28px_80px_rgba(0,0,0,0.16)] backdrop-blur-xl sm:p-8">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#E53935]">
-                    Scan here
-                  </p>
-                  <h2 className="mt-1 text-2xl font-black tracking-tight text-[#151515]">
-                    Open the download page
-                  </h2>
-                </div>
-                <div className="rounded-2xl bg-[#FFF1E8] p-3 text-[#E53935] shadow-sm">
-                  <QrcodeIcon className="h-7 w-7" />
-                </div>
-              </div>
-
-              <div className="mt-6 rounded-[30px] bg-[#111111] p-4 shadow-inner">
-                <div className="rounded-[24px] bg-white p-4">
-                  <img
-                    src={QR_IMAGE_URL}
-                    alt="CleanChops download QR code"
-                    className="mx-auto aspect-square w-full max-w-[360px]"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <MiniPill label="Android" value="Google Play" />
-                <MiniPill label="iPhone" value="App Store" />
-              </div>
-
-              <div className="mt-5 rounded-[24px] border border-[#E53935]/10 bg-[#FFF7F3] px-4 py-4">
-                <p className="text-sm leading-7 text-black/72">
-                  If someone scans this with a phone browser, they land on the
-                  download page first and can choose the app store that fits
-                  their device.
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#E53935]">
+                  Why customers choose CleanChops
                 </p>
-                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.26em] text-black/45">
-                  {CANONICAL_DOWNLOAD_URL}
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-[#151515]">
+                  Better food, better experience
+                </h2>
+              </div>
+
+              <div className="mt-6 grid gap-3">
+                <BenefitCard
+                  title="Fresh, not frozen"
+                  text="Prepared and delivered with hygiene-first handling."
+                />
+                <BenefitCard
+                  title="Fast delivery"
+                  text="Order in a few taps and get it when you need it."
+                />
+                <BenefitCard
+                  title="No hidden charges"
+                  text="Clear pricing before checkout, with simple payment flow."
+                />
+              </div>
+
+              <div className="mt-6 rounded-[24px] border border-black/8 bg-[#fff8f5] px-4 py-4">
+                <p className="text-sm leading-7 text-black/72">
+                  Download the app to browse items, place orders quickly, and
+                  track everything from one place.
                 </p>
               </div>
             </div>
@@ -187,13 +175,11 @@ function ActionButton({ label, helper, onClick, icon, dark = false }) {
   );
 }
 
-function MiniPill({ label, value }) {
+function BenefitCard({ title, text }) {
   return (
-    <div className="rounded-[22px] border border-black/8 bg-[#fffaf8] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-black/38">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-bold text-[#161616]">{value}</p>
+    <div className="rounded-[22px] border border-black/8 bg-[#fffaf8] px-4 py-4">
+      <p className="text-sm font-black text-[#161616]">{title}</p>
+      <p className="mt-1 text-sm leading-6 text-black/64">{text}</p>
     </div>
   );
 }
