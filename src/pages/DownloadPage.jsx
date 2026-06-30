@@ -78,7 +78,7 @@ export default function DownloadPage() {
                 label="Google Play"
                 helper="Android"
                 icon={<DownloadIcon className="h-5 w-5" />}
-                dark
+                tone="brand"
               />
               <ActionButton
                 onClick={() => openStore(APP_STORE_URL)}
@@ -149,28 +149,30 @@ export default function DownloadPage() {
   );
 }
 
-function ActionButton({ label, helper, onClick, icon, dark = false }) {
+function ActionButton({ label, helper, onClick, icon, tone = "light" }) {
+  const isBrand = tone === "brand";
+
   return (
     <button
       type="button"
       onClick={onClick}
       className={`inline-flex min-w-[200px] flex-1 items-center justify-between gap-3 rounded-2xl border px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-        dark
-          ? "border-[#171717] bg-[#171717] text-white"
+        isBrand
+          ? "border-[#ffb28f]/70 bg-gradient-to-r from-[#ffb28f] via-[#ff8c42] to-[#e53935] text-white"
           : "border-black/10 bg-white text-[#161616]"
       }`}
     >
       <div>
         <span
           className={`block text-[11px] uppercase tracking-[0.26em] ${
-            dark ? "text-white/45" : "text-black/38"
+            isBrand ? "text-white/70" : "text-black/38"
           }`}
         >
           {helper}
         </span>
         <span className="mt-1 block text-sm font-bold">{label}</span>
       </div>
-      <span className={dark ? "text-[#FFB38A]" : "text-[#E53935]"}>{icon}</span>
+      <span className={isBrand ? "text-white" : "text-[#E53935]"}>{icon}</span>
     </button>
   );
 }
