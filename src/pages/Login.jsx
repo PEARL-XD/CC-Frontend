@@ -155,6 +155,15 @@ export default function Login() {
                 )}
               </div>
 
+              <div className="flex justify-end">
+                <Link
+                  to="/support"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#E53935] hover:underline"
+                >
+                  Need help? Contact support
+                </Link>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}

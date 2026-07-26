@@ -11,6 +11,7 @@ import { AuthContext } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import Navbar from "../components/Navbar";
 import AuthRequired from "../components/AuthRequired";
+import { packDisplayText } from "../utils/packPricing";
 
 const DELIVERY_SLOTS = [
   "Early Morning 5-8 AM",
@@ -99,7 +100,7 @@ export default function CartPage() {
     <>
       <Navbar />
 
-      <main className="max-w-5xl mx-auto p-4 md:p-6 pb-44">
+      <main className="max-w-5xl mx-auto p-4 md:p-6 pb-52">
         <h1 className="text-2xl md:text-4xl font-extrabold mb-6 md:mb-10 text-gray-900">
           Your Cart
         </h1>
@@ -190,7 +191,7 @@ export default function CartPage() {
                               Size:
                             </span>
                             <span className="inline-block bg-gray-100 text-gray-800 text-sm px-2 py-0.5 rounded-md">
-                              {item.selectedSize}g
+                              {packDisplayText(Number(item.selectedSize) || 0, item)}
                             </span>
                           </div>
                         </div>
@@ -280,11 +281,11 @@ export default function CartPage() {
                   </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative" ref={scheduleRef}>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:flex-wrap md:items-center">
+                  <div className="relative w-full md:w-auto" ref={scheduleRef}>
                     <button
                       onClick={() => setScheduleOpen((s) => !s)}
-                      className={`px-3 py-2 rounded-md font-semibold shadow-sm border transition ${
+                      className={`w-full px-3 py-2 rounded-md font-semibold shadow-sm border transition md:w-auto ${
                         selectedSchedule
                           ? "bg-red-50 text-[#ef4444] border-red-200"
                           : "bg-[#fb923c] hover:bg-[#ef4444] text-white border-transparent"
@@ -302,7 +303,7 @@ export default function CartPage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 6 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute bottom-full left-0 mb-2 w-72 bg-white shadow-lg rounded-xl border border-orange-100 z-50 overflow-hidden"
+                          className="absolute bottom-full left-0 mb-2 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto bg-white shadow-lg rounded-xl border border-orange-100 z-50"
                         >
                           <button
                             type="button"
@@ -340,7 +341,7 @@ export default function CartPage() {
                   <button
                     type="button"
                     onClick={() => setSilentDelivery((v) => !v)}
-                    className={`px-3 py-2 rounded-md font-semibold shadow-sm border transition ${
+                    className={`w-full px-3 py-2 rounded-md font-semibold shadow-sm border transition md:w-auto ${
                       silentDelivery
                         ? "bg-red-50 text-[#ef4444] border-red-200"
                         : "bg-white text-gray-700 border-orange-200 hover:bg-orange-50"
@@ -349,7 +350,7 @@ export default function CartPage() {
                     Silent delivery
                   </button>
 
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 md:self-center">
                     {deliverySummary}
                   </div>
                 </div>
@@ -373,7 +374,7 @@ export default function CartPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.18 }}
-              className="w-full max-w-md bg-white rounded-2xl border border-orange-100 shadow-2xl p-5"
+              className="w-full max-w-md max-h-[82vh] overflow-y-auto bg-white rounded-2xl border border-orange-100 shadow-2xl p-5"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-lg font-extrabold text-gray-900">

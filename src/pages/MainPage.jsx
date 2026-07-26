@@ -1,318 +1,478 @@
-import React, { useState, useEffect, useRef } from "react";
-import raw_image from "../assets/images/raw.png";
-import cooked_image from "../assets/images/cooked.png";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { useCart } from "../contexts/CartContext";
-import { WhatToExpect, AppDownloadBanner, Footer } from "./HomepageSections";
+import { ArrowRightIcon } from "@heroicons/react/outline";
+import { getCategoryMeta, sortSectionsByPriority } from "../utils/categoryMeta";
+import StorefrontBanner from "../components/StorefrontBanner";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const FAQ_GROUPS = [
+  {
+    id: "ordering",
+    title: "Ordering",
+    emoji: "🛒",
+    count: 4,
+    items: [
+      {
+        question: "How do I place an order?",
+        answer:
+          "Browse our products, add your favorites to the cart, and complete checkout in just a few taps.",
+      },
+      {
+        question: "Can I modify my order?",
+        answer:
+          "You can modify your order only before it starts being prepared. Contact support as soon as possible.",
+      },
+      {
+        question: "Can I cancel my order?",
+        answer:
+          "Yes, orders can be cancelled before preparation begins. Once processing or delivery has started, cancellation may not be possible.",
+      },
+      {
+        question: "Is there a minimum order value?",
+        answer:
+          "No minimum order is required unless mentioned during checkout.",
+      },
+    ],
+  },
+  {
+    id: "delivery",
+    title: "Delivery",
+    emoji: "🚚",
+    count: 3,
+    items: [
+      {
+        question: "How long does delivery take?",
+        answer:
+          "Most orders are delivered within 60-90 minutes, and in the worst case it may take up to 120 minutes depending on your location and order volume.",
+      },
+      {
+        question: "Where do you deliver?",
+        answer:
+          "We currently deliver only to selected serviceable locations. Enter your address to check availability.",
+      },
+      {
+        question: "Can I schedule my order?",
+        answer:
+          "Yes, if scheduled delivery is available in your area, you can choose a preferred delivery slot during checkout.",
+      },
+    ],
+  },
+  {
+    id: "freshness",
+    title: "Products & Freshness",
+    emoji: "🐔",
+    count: 4,
+    items: [
+      {
+        question: "Is your chicken fresh or frozen?",
+        answer: "Our chicken is fresh, never frozen.",
+      },
+      {
+        question: "Is the chicken cleaned?",
+        answer:
+          "Yes. Every order is hygienically cleaned and packed before delivery.",
+      },
+      {
+        question: "How is the chicken packed?",
+        answer:
+          "We use hygienic, food-grade packaging to maintain freshness during delivery.",
+      },
+      {
+        question: "Do you use preservatives?",
+        answer:
+          "No. Our fresh chicken contains no added artificial preservatives.",
+      },
+    ],
+  },
+  {
+    id: "rtc",
+    title: "Ready-to-Cook & Cooked",
+    emoji: "🍗",
+    count: 3,
+    items: [
+      {
+        question: "What's the difference between Fresh, Ready-to-Cook, and Cooked?",
+        answer:
+          "Fresh means raw chicken cuts. Ready-to-Cook means marinated or pre-prepared items. Cooked means fully cooked meals ready to eat.",
+      },
+      {
+        question: "Are cooked meals prepared fresh?",
+        answer:
+          "Yes, our cooked meals are prepared fresh in small batches.",
+      },
+      {
+        question: "Can I order fresh chicken and cooked food together?",
+        answer:
+          "Yes, you can add products from different categories in the same order.",
+      },
+    ],
+  },
+  {
+    id: "payments",
+    title: "Payments",
+    emoji: "💳",
+    count: 2,
+    items: [
+      {
+        question: "Which payment methods do you accept?",
+        answer:
+          "We accept UPI, debit and credit cards, net banking, wallets, and cash on delivery where available.",
+      },
+      {
+        question: "Is Cash on Delivery available?",
+        answer: "Yes, COD is available for eligible orders and locations.",
+      },
+    ],
+  },
+  {
+    id: "account",
+    title: "Account & App",
+    emoji: "📱",
+    count: 2,
+    items: [
+      {
+        question: "I didn't receive my OTP.",
+        answer:
+          "Wait a few minutes and try requesting another OTP. If the issue continues, contact our support team.",
+      },
+      {
+        question: "Do I need an account to order?",
+        answer:
+          "Yes, creating an account helps you track orders, save addresses, and receive updates.",
+      },
+    ],
+  },
+  {
+    id: "pricing",
+    title: "Pricing",
+    emoji: "💰",
+    count: 1,
+    items: [
+      {
+        question: "Why do prices change?",
+        answer:
+          "Chicken prices are based on daily market rates, so prices may vary from time to time.",
+      },
+    ],
+  },
+  {
+    id: "support",
+    title: "Support",
+    emoji: "🛟",
+    count: 3,
+    items: [
+      {
+        question: "I received the wrong item.",
+        answer:
+          "Contact us immediately through the app with your order details, and we'll resolve the issue as quickly as possible.",
+      },
+      {
+        question: "My package was damaged.",
+        answer:
+          "Please don't consume the product. Share a photo with our support team, and we'll assist you.",
+      },
+      {
+        question: "How can I contact CleanChops?",
+        answer:
+          "You can reach us via in-app Support, WhatsApp, phone, or email.",
+      },
+    ],
+  },
+];
 
 export default function MainPage() {
   const navigate = useNavigate();
   const [sections, setSections] = useState([]);
-  const [index, setIndex] = useState(0);
-  const [fade, setFade] = useState(true);
-  const [showToast, setShowToast] = useState(false);
-  const { addItem } = useCart();
-
-  const pendingAddsRef = useRef(new Set());
+  const [loading, setLoading] = useState(true);
+  const [openFaqGroup, setOpenFaqGroup] = useState("ordering");
+  const [banner, setBanner] = useState({
+    enabled: false,
+    title: "",
+    message: "",
+    tone: "info",
+  });
 
   useEffect(() => {
     let mounted = true;
 
-    fetch(`${API_BASE_URL}/api/items`)
-      .then((res) => res.json())
-      .then((data) => {
+    async function loadHome() {
+      try {
+        const [itemsRes, storefrontRes] = await Promise.allSettled([
+          fetch(`${API_BASE_URL}/api/items`),
+          fetch(`${API_BASE_URL}/api/storefront`),
+        ]);
+
         if (!mounted) return;
 
-        const mappedSections = (Array.isArray(data) ? data : []).map((section) => ({
-          ...section,
-          image: section.title === "Uncooked" ? raw_image : cooked_image,
-        }));
+        if (itemsRes.status === "fulfilled") {
+          const data = await itemsRes.value.json();
+          const mapped = Array.isArray(data) ? data : [];
+          setSections(sortSectionsByPriority(mapped));
+        } else {
+          console.error("Failed to load items:", itemsRes.reason);
+        }
 
-        setSections(mappedSections);
-      })
-      .catch((err) => {
-        console.error("Failed to load items:", err);
-      });
+        if (storefrontRes.status === "fulfilled") {
+          const data = await storefrontRes.value.json();
+          const settings = data?.settings;
+          if (settings && typeof settings === "object") {
+            setBanner({
+              enabled: settings.bannerEnabled === true,
+              title: String(settings.bannerTitle || ""),
+              message: String(settings.bannerMessage || ""),
+              tone: String(settings.bannerTone || "info"),
+            });
+          } else {
+            setBanner({
+              enabled: false,
+              title: "",
+              message: "",
+              tone: "info",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load homepage:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadHome();
 
     return () => {
       mounted = false;
     };
   }, []);
 
-  const handleSlide = () => {
-    setFade(false);
-    setTimeout(() => {
-      setIndex((prev) => (sections.length ? (prev + 1) % sections.length : 0));
-      setFade(true);
-    }, 400);
-  };
-
-  if (sections.length === 0) {
-    return <div className="text-center mt-16 text-xl">Loading items...</div>;
-  }
-
-  const addToCartHandler = (item) => {
-    if (!item) return;
-
-    const isOutOfStock = item.isOutOfStock === true;
-    const isUnavailable =
-      item.isUnavailable === true ||
-      item.isCategoryDisabled === true ||
-      isOutOfStock;
-
-    if (isUnavailable) return;
-
-    const key = `${item._id || item.id}-1000`;
-
-    if (pendingAddsRef.current.has(key)) {
-      return;
-    }
-
-    pendingAddsRef.current.add(key);
-
-    const newCartItem = {
-      _id: item._id || item.id,
-      name: item.name || item.title || "Item",
-      price: Number(item.price) || 0,
-      selectedSize: 1000,
-      quantity: 1,
-      img: item.img || item.image || "",
-    };
-
-    try {
-      addItem(newCartItem);
-    } catch (err) {
-      console.error("addItem failed:", err);
-    }
-
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
-
-    setTimeout(() => {
-      pendingAddsRef.current.delete(key);
-    }, 800);
-  };
-
-  const currentSection = sections[index] || {
-    title: "",
-    articles: [],
-    image: raw_image,
-  };
-
-  const currentTitle = currentSection.title || "";
-  const isSectionDisabled = currentSection.isDisabled === true;
-  const disabledReason =
-    currentSection.disabledReason ||
-    "Cooked food is coming soon to your society.";
-
-  const nextTitle = currentTitle === "Uncooked" ? "Cooked" : "Uncooked";
-  const buttonLabel = `Looking for ${nextTitle}`;
-
-  const cardVariants = {
-    initial: { opacity: 0, y: 10, scale: 0.995 },
-    animate: { opacity: 1, y: 0, scale: 1 },
-    hover: { scale: 1.02, y: -4 },
-    exit: { opacity: 0, y: -8 },
-  };
+  const categoryTiles = useMemo(() => {
+    return sections.map((section) => {
+      const meta = getCategoryMeta(section.title);
+      return {
+        ...section,
+        meta,
+        itemCount: Array.isArray(section.articles) ? section.articles.length : 0,
+      };
+    });
+  }, [sections]);
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <div
-        className="relative w-full"
-        style={{ height: "58vh", maxHeight: "600px" }}
-        aria-hidden="false"
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={currentSection.title + index}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.45 }}
-            className={`absolute inset-0 ${fade ? "opacity-100" : "opacity-0"}`}
-          >
-            <img
-              src={currentSection.image}
-              alt={currentSection.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+    <div className="min-h-[calc(100vh-64px)] bg-[linear-gradient(180deg,#fffaf6_0%,#fff3e8_100%)] pb-12">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <section className="overflow-hidden rounded-[32px] border border-white/70 bg-white/84 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:p-8">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center rounded-full border border-[#E53935]/12 bg-[#E53935]/8 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.3em] text-[#7f1d1d] sm:text-[11px]">
+              Choose a category
+            </div>
 
-            <div className="absolute inset-0 bg-black bg-opacity-30" />
+            <h1 className="mt-5 text-3xl font-black leading-[0.98] tracking-tight text-[#141414] sm:text-5xl lg:text-6xl">
+              Pick your menu,
+              <span className="block text-[#E53935]">
+                then open the section you want.
+              </span>
+            </h1>
 
-            <h2 className="absolute left-6 bottom-20 text-white text-4xl md:text-6xl font-extrabold drop-shadow-2xl select-none z-10">
-              {currentSection.title}
-            </h2>
-
-            {isSectionDisabled && (
-              <div className="absolute left-6 bottom-36 z-10 max-w-[90%] md:max-w-md rounded-full bg-white/95 px-4 py-2 text-sm md:text-base font-semibold text-[#ef4444] shadow-lg">
-                {disabledReason}
-              </div>
-            )}
-
-            <button
-              onClick={handleSlide}
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 px-6 md:px-8 py-2 md:py-3 bg-gradient-to-r from-[#fb923c] to-[#ef4444] text-white rounded-full font-semibold shadow-lg hover:scale-105 transition-transform z-10 focus:outline-none focus:ring-4 focus:ring-orange-200"
-              aria-label={buttonLabel}
-              title={buttonLabel}
-            >
-              {buttonLabel}
-            </button>
-          </motion.div>
-        </AnimatePresence>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-black/68 sm:text-lg sm:leading-8">
+              Each category is grouped by the backend, so cooked, uncooked, and
+              ready-to-eat items stay organized as your menu grows.
+            </p>
+          </div>
+        </section>
       </div>
 
-      <div className="w-full max-w-7xl mx-auto my-10 px-4 md:px-6 xl:px-0">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {(currentSection.articles || []).map((item, idx) => {
-            const key = `${item._id || item.id}-1000`;
-            const isPending = pendingAddsRef.current.has(key);
+      <StorefrontBanner
+        className="mt-1"
+        enabled={banner.enabled}
+        title={banner.title}
+        message={banner.message}
+        tone={banner.tone}
+      />
 
-            const isOutOfStock = item.isOutOfStock === true;
-            const isUnavailable =
-              item.isUnavailable === true ||
-              item.isCategoryDisabled === true ||
-              isOutOfStock ||
-              isSectionDisabled;
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {(loading ? Array.from({ length: 3 }) : categoryTiles).map(
+            (section, index) => {
+              if (loading) {
+                return <CategoryTileSkeleton key={index} />;
+              }
 
-            const unavailableLabel = isOutOfStock ? "Out of stock" : "Coming soon";
+              return (
+                <CategoryTile
+                  key={section.title}
+                  title={section.title}
+                  count={section.itemCount}
+                  meta={section.meta}
+                  onClick={() => navigate(`/category/${section.meta.slug}`)}
+                />
+              );
+            },
+          )}
+        </div>
 
-            return (
-              <motion.article
-                key={item._id || item.id || idx}
-                layout
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                whileHover={isUnavailable ? undefined : "hover"}
-                variants={cardVariants}
-                transition={{ duration: 0.18 }}
-                className={`bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col relative ${
-                  isUnavailable ? "opacity-60 grayscale" : "hover:shadow-md"
-                }`}
+        <section className="mt-12">
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.32em] text-[#E53935]">
+              Quick answers
+            </p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-[#161616] sm:text-3xl">
+              Frequently asked questions
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-black/60 sm:text-[15px] sm:leading-8">
+              Helpful answers for ordering, delivery, pricing, and support.
+            </p>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            {FAQ_GROUPS.map((group) => (
+              <div
+                key={group.id}
+                className="overflow-hidden rounded-[24px] border border-black/8 bg-white shadow-[0_14px_36px_rgba(0,0,0,0.06)]"
               >
-                <div className="relative rounded-t-xl overflow-hidden">
-                  <img
-                    src={item.img}
-                    alt={item.name}
-                    className="w-full h-44 object-cover rounded-t-xl"
-                    loading="lazy"
-                  />
-
-                  {isUnavailable && (
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10">
-                      <span className="px-3 py-1 rounded-full bg-white text-red-600 font-bold text-sm shadow">
-                        {unavailableLabel}
-                      </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpenFaqGroup((current) =>
+                      current === group.id ? "" : group.id,
+                    )
+                  }
+                  className="flex w-full cursor-pointer items-center justify-between gap-4 px-4 py-4 text-left sm:px-5"
+                  aria-expanded={openFaqGroup === group.id}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#fff2ec] text-xl">
+                      {group.emoji}
+                    </span>
+                    <div>
+                      <div className="text-base font-extrabold text-[#161616] sm:text-lg">
+                        {group.title}
+                      </div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.22em] text-black/40">
+                        {group.count} item{group.count === 1 ? "" : "s"}
+                      </div>
                     </div>
-                  )}
-
-                  <button
-                    title={
-                      isUnavailable
-                        ? unavailableLabel
-                        : `Add ${item.name} to cart`
-                    }
-                    className={`absolute bottom-3 right-3 bg-white border border-orange-200 shadow rounded-full w-9 h-9 flex justify-center items-center transition transform focus:outline-none focus:ring-2 focus:ring-orange-200 ${
-                      isPending || isUnavailable
-                        ? "opacity-60 pointer-events-none"
-                        : "hover:bg-orange-50 hover:-translate-y-0.5"
+                  </div>
+                  <span
+                    className={`text-[#E53935] transition-transform duration-200 ${
+                      openFaqGroup === group.id ? "rotate-180" : "rotate-0"
                     }`}
-                    onClick={() => addToCartHandler(item)}
-                    aria-label={
-                      isUnavailable
-                        ? unavailableLabel
-                        : `Add ${item.name} to cart`
-                    }
-                    aria-disabled={isPending || isUnavailable}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-[#E53935]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 5v14m7-7H5"
-                      />
-                    </svg>
-                  </button>
-                </div>
+                    <ArrowRightIcon className="h-5 w-5 rotate-90" />
+                  </span>
+                </button>
 
-                <div className="px-4 py-3 flex flex-col gap-2 flex-1">
-                  <div className="text-lg font-semibold text-gray-900 line-clamp-2">
-                    {item.name}
-                  </div>
-
-                  {item.desc && (
-                    <div className="text-xs text-gray-500 line-clamp-3">
-                      {item.desc}
-                    </div>
-                  )}
-
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-lg font-bold text-[#E53935]">
-                        ₹{item.price}
-                      </span>
-
-                      <span className="text-sm text-gray-400 line-through">
-                        ₹{item.oldprice || "199"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        disabled={isUnavailable}
-                        className={`px-3 py-1 rounded-md border shadow-sm text-sm font-medium transition ${
-                          isUnavailable
-                            ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}
-                        onClick={() => {
-                          if (!isUnavailable) {
-                            navigate(`/product/${item._id || item.id}`);
-                          }
-                        }}
-                      >
-                        {isUnavailable ? unavailableLabel : "Customize"}
-                      </button>
+                {openFaqGroup === group.id && (
+                  <div className="border-t border-black/6 px-4 pb-4 sm:px-5 sm:pb-5">
+                    <div className="space-y-4 pt-4">
+                      {group.items.map((item) => (
+                        <div
+                          key={item.question}
+                          className="rounded-2xl border border-black/6 bg-[#fffaf8] p-4"
+                        >
+                          <h3 className="text-sm font-extrabold leading-6 text-[#111] sm:text-[15px]">
+                            {item.question}
+                          </h3>
+                          <p className="mt-2 text-sm leading-7 text-black/58">
+                            {item.answer}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              </motion.article>
-            );
-          })}
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function CategoryTile({ title, count, meta, onClick }) {
+  const image = meta.image;
+  const [start, mid, end] = meta.fallback;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative overflow-hidden rounded-[28px] border border-black/8 bg-white text-left shadow-[0_16px_40px_rgba(0,0,0,0.08)] transition-transform hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)]"
+    >
+      <div className="relative h-[230px] overflow-hidden sm:h-[260px]">
+        {image ? (
+          <img
+            src={image}
+            alt={meta.label}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div
+            className="flex h-full w-full items-end p-5"
+            style={{
+              background: `radial-gradient(circle at top left, ${meta.tint}, transparent 45%), linear-gradient(135deg, ${start} 0%, ${mid} 55%, ${end} 100%)`,
+            }}
+          >
+            <div className="max-w-[210px]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-black/45">
+                Coming soon
+              </p>
+              <h3 className="mt-2 text-3xl font-black leading-[0.95] text-[#111]">
+                {meta.label}
+              </h3>
+            </div>
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.14)_100%)]" />
+
+        <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-[#111] shadow-sm">
+          {count} item{count === 1 ? "" : "s"}
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+          <div className="rounded-[22px] border border-white/25 bg-black/28 p-4 text-white backdrop-blur-md">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-white/65 sm:text-[11px]">
+              {meta.label}
+            </p>
+            <div className="mt-2 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-black leading-none sm:text-3xl">
+                  {title}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-white/78">
+                  {meta.summary}
+                </p>
+              </div>
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#E53935] shadow-lg"
+                aria-hidden="true"
+              >
+                <ArrowRightIcon className="h-5 w-5" />
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute right-4 top-4 rounded-full bg-black/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white backdrop-blur-md">
+          Open
         </div>
       </div>
+    </button>
+  );
+}
 
-      <WhatToExpect />
-      <AppDownloadBanner />
-      <Footer />
-
-      <AnimatePresence>
-        {showToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.3 }}
-            className="fixed bottom-6 right-6 md:right-12 bg-[#ef4444] text-white py-3 px-6 rounded shadow-lg z-50"
-            role="status"
-            aria-live="polite"
-          >
-            Item added to cart!
-          </motion.div>
-        )}
-      </AnimatePresence>
+function CategoryTileSkeleton() {
+  return (
+    <div className="h-[230px] animate-pulse rounded-[28px] border border-black/6 bg-white/80 shadow-[0_16px_40px_rgba(0,0,0,0.05)] sm:h-[260px]">
+      <div className="flex h-full flex-col justify-between p-5">
+        <div className="h-7 w-24 rounded-full bg-black/6" />
+        <div className="space-y-3">
+          <div className="h-8 w-40 rounded bg-black/6" />
+          <div className="h-4 w-56 rounded bg-black/5" />
+          <div className="h-4 w-32 rounded bg-black/5" />
+        </div>
+      </div>
     </div>
   );
 }

@@ -64,10 +64,26 @@ export function CartProvider({ children }) {
         const copy = [...items];
         // FIX: cap optimistic quantity at 10 to stay in sync with UI limits
         const newQty = Math.min(copy[idx].quantity + payload.quantity, 10);
-        copy[idx] = { ...copy[idx], quantity: newQty };
+        copy[idx] = {
+          ...copy[idx],
+          ...item,
+          quantity: newQty,
+          category: item.category ?? copy[idx].category ?? "",
+          cutInstruction: item.cutInstruction ?? copy[idx].cutInstruction ?? "",
+        };
         return copy;
       }
-      return [...items, { ...payload, price: item.price, name: item.name, img: item.img }];
+      return [
+        ...items,
+        {
+          ...payload,
+          price: item.price,
+          name: item.name,
+          img: item.img,
+          category: item.category ?? "",
+          cutInstruction: item.cutInstruction ?? "",
+        },
+      ];
     });
 
     try {

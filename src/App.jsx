@@ -25,6 +25,8 @@ import Legalpage from "./pages/Legalpage.jsx";
 import EditProfile from "./pages/EditProfile.jsx";
 import AdminInventoryPage from "./pages/AdminInventoryPage.jsx";
 import DownloadPage from "./pages/DownloadPage.jsx";
+import Layout from "./components/Layout";
+import CategoryPage from "./pages/CategoryPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
@@ -95,6 +97,14 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/info" element={<Legalpage />} />
           <Route path="/download" element={<DownloadPage />} />
+          <Route
+            path="/category/:categorySlug"
+            element={
+              <Layout>
+                <CategoryPage />
+              </Layout>
+            }
+          />
 
           <Route
             path="/profile"
