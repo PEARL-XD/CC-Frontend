@@ -9,11 +9,6 @@ import Logo from "../assets/images/logo.png";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const FLOOR_CONFIG = {
-  // A2: 14,
-};
-const DEFAULT_MAX_FLOOR = 14;
-
 const SOCIETY_OPTIONS = {
   "Indraprastha, Ghaziabad": [
     "Bharat City",
@@ -27,50 +22,39 @@ const SOCIETY_OPTIONS = {
   ],
 };
 
-function generateTowers() {
-  const arr = [];
-  const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
-  for (const l of letters) {
-    for (let i = 1; i <= 4; i++) {
-      arr.push(`${l}${i}`);
-    }
-  }
-  return arr;
-}
-
-const towers = generateTowers();
-
 const schema = yup.object().shape({
-  name: yup.string().required("Name is required").min(2, "Name must be at least 2 characters"),
-  email: yup.string().required("Enter a valid email address").email("Enter a valid email address"),
+  name: yup
+    .string()
+    .required("Name is required")
+    .min(2, "Name must be at least 2 characters"),
+  email: yup
+    .string()
+    .required("Enter a valid email address")
+    .email("Enter a valid email address"),
   phone: yup
     .string()
     .required("Enter a valid 10-digit phone number")
     .matches(/^\d{10}$/, "Enter a valid 10-digit phone number"),
-  password: yup.string().required("Password must be at least 8 characters").min(8, "Password must be at least 8 characters"),
+  password: yup
+    .string()
+    .required("Password must be at least 8 characters")
+    .min(8, "Password must be at least 8 characters"),
   confirmPassword: yup
     .string()
     .oneOf([yup.ref("password"), null], "Passwords do not match")
     .required("Confirm Password is required"),
   society: yup.string().required("Please select your society"),
   tower: yup.string().required("Tower is required"),
-  flat: yup
-    .string()
-    .required("Flat must be 4 digits (floor + unit), e.g. 1205")
-    .matches(/^\d{4}$/, "Flat must be 4 digits (e.g. 1205)")
-    .test("flat-valid", "Invalid flat number", function (value) {
-      if (!value) return false;
-      const floor = parseInt(value.slice(0, 2), 10);
-      const unit = parseInt(value.slice(2), 10);
-      const maxFloor = FLOOR_CONFIG[this.parent.tower] || DEFAULT_MAX_FLOOR;
-      if (unit < 1 || unit > 12) return false;
-      if (floor < 0 || floor > maxFloor) return false;
-      return true;
-    }),
+  floor: yup.string().optional(),
+  flat: yup.string().required("Flat number is required"),
 });
 
-const allSocieties = Object.entries(SOCIETY_OPTIONS).flatMap(([locality, societies]) =>
-  societies.map((society) => ({ locality, society }))
+const allSocieties = Object.entries(SOCIETY_OPTIONS).flatMap(
+  ([locality, societies]) =>
+    societies.map((society) => ({
+      locality,
+      society,
+    })),
 );
 
 export default function Register() {
@@ -95,7 +79,9 @@ export default function Register() {
     mode: "onBlur",
     defaultValues: {
       society: "",
-      tower: "A1",
+      tower: "",
+      floor: "",
+      flat: "",
     },
   });
 
@@ -103,7 +89,7 @@ export default function Register() {
 
   const selectedSocietyMeta = useMemo(
     () => allSocieties.find((item) => item.society === selectedSociety),
-    [selectedSociety]
+    [selectedSociety],
   );
 
   const filteredSocieties = useMemo(() => {
@@ -112,7 +98,7 @@ export default function Register() {
     return allSocieties.filter(
       (item) =>
         item.society.toLowerCase().includes(q) ||
-        item.locality.toLowerCase().includes(q)
+        item.locality.toLowerCase().includes(q),
     );
   }, [search]);
 
@@ -128,6 +114,7 @@ export default function Register() {
           password: data.password,
           society: data.society,
           tower: data.tower,
+          floor: data.floor,
           flat: data.flat,
         }),
       });
@@ -159,207 +146,338 @@ export default function Register() {
     <>
       <Toaster position="top-center" reverseOrder={false} />
 
-      <div className="min-h-screen w-full bg-gradient-to-br from-[#fff6e5] via-[#ffd6a5] to-[#ff8c42] flex items-center justify-center p-4 sm:p-6">
+      <div className="min-h-screen w-full bg-[linear-gradient(135deg,#fff7ed_0%,#ffd9b3_45%,#ff9d62_100%)] px-4 py-4 sm:px-6 sm:py-6">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="max-w-md w-full bg-white bg-opacity-90 backdrop-blur-md rounded-3xl shadow-lg p-6 sm:p-10 border border-orange-200"
+          className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_24px_80px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:grid-cols-[0.92fr_1.08fr]"
         >
-          <div className="flex flex-col items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-            <img src={Logo} alt="CleanChops Logo" className="h-16 object-contain" />
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#E53935]">Create Account</h1>
-            <p className="text-xs sm:text-sm text-gray-700 text-center">
-              Register to start ordering Fresh & Clean Chicken
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                Name
-              </label>
-              <input
-                id="name"
-                {...register("name")}
-                type="text"
-                placeholder="Enter your name"
-                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
-                  errors.name ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-                }`}
-              />
-              {errors.name && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.name.message}</p>}
+          <aside className="hidden flex-col justify-center bg-[linear-gradient(180deg,#fff8f1_0%,#ffe3c8_100%)] p-10 lg:flex">
+            <div className="max-w-md">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.32em] text-[#E53935]">
+                Join CleanChops
+              </p>
+              <h2 className="mt-4 text-4xl font-black leading-[0.96] tracking-tight text-[#161616]">
+                Create your account and order with ease.
+              </h2>
+              <p className="mt-4 text-base leading-8 text-black/65">
+                Keep your address, order history, and delivery updates ready in
+                one clean place.
+              </p>
             </div>
+          </aside>
 
-            <div>
-              <label htmlFor="email" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                Email Address
-              </label>
-              <input
-                id="email"
-                {...register("email")}
-                type="email"
-                placeholder="Enter your email"
-                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
-                  errors.email ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-                }`}
-              />
-              {errors.email && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.email.message}</p>}
-            </div>
+          <section className="p-5 sm:p-7 lg:p-10">
+            <div className="mx-auto flex max-w-xl flex-col">
+              <div className="mb-7 flex flex-col items-center gap-3 text-center sm:mb-8">
+                <img
+                  src={Logo}
+                  alt="CleanChops Logo"
+                  className="h-14 object-contain sm:h-16"
+                />
+                <div>
+                  <h1 className="text-2xl font-black tracking-tight text-[#E53935] sm:text-3xl">
+                    Create Account
+                  </h1>
+                  <p className="mt-1 text-sm text-gray-700 sm:text-base">
+                    Register to start ordering fresh and clean chicken.
+                  </p>
+                </div>
+              </div>
 
-            <div>
-              <label htmlFor="phone" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                Phone Number
-              </label>
-              <input
-                id="phone"
-                {...register("phone")}
-                type="tel"
-                inputMode="numeric"
-                placeholder="9876543210"
-                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
-                  errors.phone ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-                }`}
-              />
-              {errors.phone && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.phone.message}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                {...register("password")}
-                type="password"
-                placeholder="Enter your password"
-                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
-                  errors.password ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-                }`}
-              />
-              {errors.password && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.password.message}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                {...register("confirmPassword")}
-                type="password"
-                placeholder="Confirm your password"
-                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
-                  errors.confirmPassword ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-                }`}
-              />
-              {errors.confirmPassword && (
-                <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                Select Your Society
-              </label>
-
-              <input type="hidden" {...register("society")} />
-
-              <button
-                type="button"
-                onClick={() => setPickerOpen(true)}
-                className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition focus:outline-none focus:ring-4 ${
-                  errors.society ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className={`text-sm sm:text-base ${selectedSociety ? "text-gray-800" : "text-gray-400"}`}>
-                      {selectedSociety || "Choose your society"}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="mb-1 block text-sm font-semibold text-gray-800"
+                  >
+                    Name
+                  </label>
+                  <input
+                    id="name"
+                    {...register("name")}
+                    type="text"
+                    placeholder="Enter your name"
+                    className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                      errors.name
+                        ? "border-red-400 focus:ring-red-300"
+                        : "border-gray-300 focus:ring-orange-300"
+                    }`}
+                  />
+                  {errors.name && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.name.message}
                     </p>
-                    {selectedSocietyMeta && (
-                      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">
-                        {selectedSocietyMeta.locality}
+                  )}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="mb-1 block text-sm font-semibold text-gray-800"
+                    >
+                      Email Address
+                    </label>
+                    <input
+                      id="email"
+                      {...register("email")}
+                      type="email"
+                      placeholder="Enter your email"
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                        errors.email
+                          ? "border-red-400 focus:ring-red-300"
+                          : "border-gray-300 focus:ring-orange-300"
+                      }`}
+                    />
+                    {errors.email && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.email.message}
                       </p>
                     )}
                   </div>
-                  <span className="text-gray-400 text-sm">▼</span>
+
+                  <div>
+                    <label
+                      htmlFor="phone"
+                      className="mb-1 block text-sm font-semibold text-gray-800"
+                    >
+                      Phone Number
+                    </label>
+                    <input
+                      id="phone"
+                      {...register("phone")}
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="9876543210"
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                        errors.phone
+                          ? "border-red-400 focus:ring-red-300"
+                          : "border-gray-300 focus:ring-orange-300"
+                      }`}
+                    />
+                    {errors.phone && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.phone.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </button>
 
-              {errors.society && (
-                <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.society.message}</p>
-              )}
-            </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="password"
+                      className="mb-1 block text-sm font-semibold text-gray-800"
+                    >
+                      Password
+                    </label>
+                    <input
+                      id="password"
+                      {...register("password")}
+                      type="password"
+                      placeholder="Enter your password"
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                        errors.password
+                          ? "border-red-400 focus:ring-red-300"
+                          : "border-gray-300 focus:ring-orange-300"
+                      }`}
+                    />
+                    {errors.password && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.password.message}
+                      </p>
+                    )}
+                  </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="tower" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                  Tower
-                </label>
-                <select
-                  id="tower"
-                  {...register("tower")}
-                  className="w-full rounded-xl border border-gray-300 px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 focus:outline-none focus:ring-4 focus:ring-orange-300"
+                  <div>
+                    <label
+                      htmlFor="confirmPassword"
+                      className="mb-1 block text-sm font-semibold text-gray-800"
+                    >
+                      Confirm Password
+                    </label>
+                    <input
+                      id="confirmPassword"
+                      {...register("confirmPassword")}
+                      type="password"
+                      placeholder="Confirm your password"
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                        errors.confirmPassword
+                          ? "border-red-400 focus:ring-red-300"
+                          : "border-gray-300 focus:ring-orange-300"
+                      }`}
+                    />
+                    {errors.confirmPassword && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.confirmPassword.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-800">
+                    Select Your Society
+                  </label>
+
+                  <input type="hidden" {...register("society")} />
+
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    className={`w-full rounded-2xl border px-4 py-3.5 text-left transition focus:outline-none focus:ring-4 ${
+                      errors.society
+                        ? "border-red-400 focus:ring-red-300"
+                        : "border-gray-300 focus:ring-orange-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm sm:text-base ${
+                            selectedSociety ? "text-gray-800" : "text-gray-400"
+                          }`}
+                        >
+                          {selectedSociety || "Choose your society"}
+                        </p>
+                        {selectedSocietyMeta && (
+                          <p className="mt-0.5 truncate text-[11px] text-gray-500 sm:text-xs">
+                            {selectedSocietyMeta.locality}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-400">▼</span>
+                    </div>
+                  </button>
+
+                  {errors.society && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.society.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="tower"
+                    className="mb-1 block text-sm font-semibold text-gray-800"
+                  >
+                    Tower
+                  </label>
+                  <input
+                    id="tower"
+                    {...register("tower")}
+                    type="text"
+                    placeholder="A1 / A block"
+                    className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                      errors.tower
+                        ? "border-red-400 focus:ring-red-300"
+                        : "border-gray-300 focus:ring-orange-300"
+                    }`}
+                  />
+                  {errors.tower && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.tower.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="floor"
+                      className="mb-1 block text-sm font-semibold text-gray-800"
+                    >
+                      Floor No.
+                    </label>
+                    <input
+                      id="floor"
+                      {...register("floor")}
+                      type="text"
+                      placeholder="e.g. 5"
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                        errors.floor
+                          ? "border-red-400 focus:ring-red-300"
+                          : "border-gray-300 focus:ring-orange-300"
+                      }`}
+                    />
+                    {errors.floor && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.floor.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="flat"
+                      className="mb-1 block text-sm font-semibold text-gray-800"
+                    >
+                      Flat No
+                    </label>
+                    <input
+                      id="flat"
+                      {...register("flat")}
+                      type="text"
+                      placeholder="Your flat number"
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
+                        errors.flat
+                          ? "border-red-400 focus:ring-red-300"
+                          : "border-gray-300 focus:ring-orange-300"
+                      }`}
+                    />
+                    {errors.flat && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.flat.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#fb923c] to-[#ef4444] py-3.5 text-lg font-semibold text-white shadow-md transition-transform hover:scale-[1.01] disabled:opacity-50"
                 >
-                  {towers.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                {errors.tower && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.tower.message}</p>}
-              </div>
+                  {isSubmitting ? "Registering..." : "Register"}
+                </button>
+              </form>
 
-              <div>
-                <label htmlFor="flat" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-                  Flat (4-digit e.g. 1205)
-                </label>
-                <input
-                  id="flat"
-                  {...register("flat")}
-                  type="text"
-                  placeholder="e.g. 1205"
-                  className={`w-full rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-gray-800 placeholder-gray-400 transition focus:outline-none focus:ring-4 ${
-                    errors.flat ? "border-red-400 focus:ring-red-300" : "border-gray-300 focus:ring-orange-300"
-                  }`}
-                />
-                {errors.flat && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{errors.flat.message}</p>}
-              </div>
+              <p className="mt-6 text-center text-sm text-gray-600">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="font-medium text-orange-600 hover:underline"
+                >
+                  Sign In
+                </Link>
+              </p>
+
+              <p className="mt-5 text-center text-xs text-gray-400">
+                By signing in you agree to our{" "}
+                <Link to="/info" className="underline hover:text-gray-600">
+                  Terms & Privacy
+                </Link>
+                .
+              </p>
             </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#fb923c] to-[#ef4444] text-white text-lg font-semibold shadow-md hover:scale-105 transition-transform disabled:opacity-50"
-            >
-              {isSubmitting ? "Registering..." : "Register"}
-            </button>
-          </form>
-
-          <p className="text-center text-xs sm:text-sm text-gray-600 mt-6">
-            Already have an account?{" "}
-            <Link to="/login" className="text-orange-600 font-medium hover:underline">
-              Sign In
-            </Link>
-          </p>
-
-          <p className="mt-8 text-center text-xs text-gray-400">
-            By signing in you agree to our{" "}
-            <Link to="/info" className="underline hover:text-gray-600">
-              Terms & Privacy
-            </Link>.
-          </p>
+          </section>
         </motion.div>
       </div>
 
       {pickerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-orange-100 overflow-hidden">
-            <div className="px-5 py-4 border-b border-orange-100 flex items-center justify-between">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
               <div>
-                <h2 className="text-lg font-extrabold text-gray-900">Select your society</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Search by society or locality</p>
+                <h2 className="text-lg font-extrabold text-gray-900">
+                  Select your society
+                </h2>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Search by society or locality
+                </p>
               </div>
               <button
                 type="button"
@@ -367,7 +485,7 @@ export default function Register() {
                   setPickerOpen(false);
                   setSearch("");
                 }}
-                className="text-gray-400 hover:text-gray-700 text-xl leading-none"
+                className="text-xl leading-none text-gray-400 hover:text-gray-700"
               >
                 ×
               </button>
@@ -379,13 +497,15 @@ export default function Register() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search society..."
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-300"
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-300"
               />
             </div>
 
             <div className="max-h-[360px] overflow-y-auto px-4 pb-4">
               {filteredSocieties.length === 0 ? (
-                <div className="py-10 text-center text-sm text-gray-500">No society found</div>
+                <div className="py-10 text-center text-sm text-gray-500">
+                  No society found
+                </div>
               ) : (
                 <div className="space-y-2">
                   {filteredSocieties.map((item) => (
@@ -399,8 +519,12 @@ export default function Register() {
                           : "border-gray-200 hover:border-orange-200 hover:bg-orange-50/40"
                       }`}
                     >
-                      <div className="font-semibold text-gray-900">{item.society}</div>
-                      <div className="text-xs text-gray-500 mt-1">{item.locality}</div>
+                      <div className="font-semibold text-gray-900">
+                        {item.society}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {item.locality}
+                      </div>
                     </button>
                   ))}
                 </div>
