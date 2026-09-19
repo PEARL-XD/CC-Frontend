@@ -6,7 +6,7 @@ import {
   PlusIcon,
   InformationCircleIcon,
 } from "@heroicons/react/outline";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { AuthContext } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import Navbar from "../components/Navbar";
@@ -20,7 +20,7 @@ const DELIVERY_SLOTS = [
 ];
 
 export default function CartPage() {
-  const { accessToken } = useContext(AuthContext);
+  const { accessToken, user } = useContext(AuthContext);
   const { cartItems, removeItem, updateQuantity } = useCart();
   const navigate = useNavigate();
 
@@ -65,6 +65,25 @@ export default function CartPage() {
   };
 
   const handleBuyNow = () => {
+    const hasLocation = Boolean(
+      user?.deliveryLocation?.locationKey ||
+      user?.deliveryLocation?.latitude != null ||
+      user?.savedLocations?.length ||
+      user?.tower ||
+      user?.flat ||
+      user?.society,
+    );
+
+    if (!hasLocation || user?.deliveryLocation?.serviceable === false) {
+      navigate("/location", { state: { from: "/cart" } });
+      return;
+    }
+
+    if (!/^\d{10}$/.test(String(user?.phone || "").replace(/\D/g, ""))) {
+      navigate("/edit-profile", { state: { from: "/cart", phoneRequired: true } });
+      return;
+    }
+
     navigate("/paymentpage", {
       state: {
         cartItems,

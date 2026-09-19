@@ -27,6 +27,7 @@ import AdminInventoryPage from "./pages/AdminInventoryPage.jsx";
 import DownloadPage from "./pages/DownloadPage.jsx";
 import Layout from "./components/Layout";
 import CategoryPage from "./pages/CategoryPage.jsx";
+import LocationPage from "./pages/LocationPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
@@ -95,6 +96,14 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/cart" element={<Cart />} />
+          <Route
+            path="/location"
+            element={
+              <ProtectedRoute>
+                <LocationPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/info" element={<Legalpage />} />
           <Route path="/download" element={<DownloadPage />} />
           <Route

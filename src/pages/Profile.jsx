@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import AuthRequired from "../components/AuthRequired";
@@ -29,7 +28,9 @@ export default function Profile() {
           try {
             const data = await res.json();
             message = data.error || message;
-          } catch (_) {}
+          } catch {
+            message = "Failed to fetch profile";
+          }
           throw new Error(message);
         }
         return res.json();
@@ -125,9 +126,23 @@ export default function Profile() {
                 <ProfileField label="Name" value={user.name} />
                 <ProfileField label="Email Address" value={user.email} />
                 <ProfileField label="Phone Number" value={user.phone} />
-                <ProfileField label="Society" value={user.society} />
-                <ProfileField label="Tower" value={user.tower} />
-                <ProfileField label="Flat Number" value={user.flat} />
+                <div className="md:col-span-2 rounded-2xl border border-orange-100 bg-[#fffaf8] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Address</span>
+                      <p className="mt-1 font-semibold text-gray-900">
+                        {user.deliveryLocation?.addressLabel || "No address selected"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/location")}
+                      className="rounded-xl border border-orange-300 px-4 py-2 font-semibold text-orange-600 transition hover:bg-orange-50"
+                    >
+                      Manage addresses
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">

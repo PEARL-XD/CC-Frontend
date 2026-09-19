@@ -1,5 +1,5 @@
 import React, {
-  useEffect, useState, useContext, useCallback, useRef,
+  useEffect, useState, useContext, useCallback,
 } from "react";
 import axios from "axios";
 import { AuthContext } from "../contexts/AuthContext";

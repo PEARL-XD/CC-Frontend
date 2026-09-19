@@ -202,6 +202,30 @@ export default function Navbar() {
             />
           </Link>
 
+          <button
+            type="button"
+            onClick={() => navigate("/location")}
+            className="hidden max-w-[210px] shrink-0 items-center gap-2 rounded-2xl border border-orange-100 bg-[#fffaf8] px-3 py-2 text-left sm:flex"
+            title="Choose delivery location"
+          >
+            <span className="text-lg text-[#E53935]">⌖</span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#E53935]">Deliver to</span>
+              <span className="block truncate text-xs font-bold text-[#333]">
+                {user?.deliveryLocation?.addressLabel || user?.deliveryLocation?.locality || "Choose location"}
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/location")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-[#fffaf8] text-lg text-[#E53935] sm:hidden"
+            aria-label="Choose delivery location"
+          >
+            ⌖
+          </button>
+
           {/* Search */}
           <div className="cc-search" style={{ position: "relative" }}>
             <label htmlFor="nav-search" className="sr-only">

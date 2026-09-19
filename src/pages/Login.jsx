@@ -1,5 +1,7 @@
-import React, { useEffect, useContext } from "react";
+import React, { useCallback, useEffect, useContext, useRef, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
+// The animation component is used in JSX; keep the explicit import for Vite's runtime transform.
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
@@ -26,11 +28,55 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation(); // ✅ added
   const { setAccessToken } = useContext(AuthContext);
+  const googleButtonRef = useRef(null);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID;
+
+  const finishSocialLogin = useCallback(async (idToken) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/social-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ provider: "google", idToken }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Google sign-in failed.");
+      setAccessToken(result.accessToken);
+      toast.success("Signed in with Google");
+      navigate(location.state?.from || "/home", { replace: true });
+    } catch (error) {
+      toast.error(error.message || "Google sign-in failed.");
+      console.error("Google sign-in error:", error);
+    }
+  }, [location.state, navigate, setAccessToken]);
 
   useEffect(() => {
     document.body.classList.add("no-scroll");
     return () => document.body.classList.remove("no-scroll");
   }, []);
+
+  useEffect(() => {
+    if (!googleClientId) return undefined;
+    const existing = document.querySelector("script[data-google-identity]");
+    const script = existing || document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = "true";
+    if (!existing) document.head.appendChild(script);
+    const ready = () => setGoogleReady(true);
+    script.addEventListener("load", ready);
+    if (window.google?.accounts?.id) ready();
+    return () => script.removeEventListener("load", ready);
+  }, [googleClientId]);
+
+  useEffect(() => {
+    if (!googleReady || !googleClientId || !googleButtonRef.current || !window.google?.accounts?.id) return;
+    googleButtonRef.current.innerHTML = "";
+    window.google.accounts.id.initialize({ client_id: googleClientId, callback: ({ credential }) => finishSocialLogin(credential) });
+    window.google.accounts.id.renderButton(googleButtonRef.current, { theme: "outline", size: "large", width: 360, text: "continue_with" });
+  }, [finishSocialLogin, googleReady, googleClientId]);
 
   const {
     register,
@@ -182,6 +228,8 @@ export default function Login() {
                 Create an account
               </Link>
             </p>
+
+            {googleClientId && <div className="mt-5 flex justify-center" ref={googleButtonRef} aria-label="Continue with Google" />}
 
             <p className="mt-8 text-center text-xs text-gray-400">
   By signing in you agree to our{" "}
