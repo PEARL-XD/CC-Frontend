@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";

@@ -6,7 +6,8 @@ import {
   PlusIcon,
   InformationCircleIcon,
 } from "@heroicons/react/outline";
-import { AnimatePresence } from "framer-motion";
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import Navbar from "../components/Navbar";
