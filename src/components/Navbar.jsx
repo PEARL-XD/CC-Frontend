@@ -175,6 +175,7 @@ export default function Navbar() {
         }}
       >
         <div
+          className="cc-nav-inner"
           style={{
             maxWidth: "1280px",
             margin: "0 auto",
@@ -474,7 +475,7 @@ export default function Navbar() {
           <div className="cc-spacer" />
 
           {/* Right actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="cc-nav-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             {/* Cart */}
             <Link
               to="/cart"
@@ -762,10 +763,27 @@ export default function Navbar() {
         /* Hide spacer on mobile so search fills the gap */
         .cc-spacer { flex: 1; }
 
+        .cc-nav-inner { width: 100%; }
+        .cc-nav-actions { flex-shrink: 0; }
+
         @media (max-width: 640px) {
-   
+          .cc-nav-inner {
+            height: auto !important;
+            min-height: 64px;
+            flex-wrap: wrap;
+            gap: 0.5rem !important;
+            padding: 0.65rem 0.75rem 0.75rem !important;
+          }
+
           .cc-spacer     { display: none  !important; }
-          .cc-search     { flex: 1; max-width: unset; }
+          .cc-search     {
+            order: 5;
+            flex: 1 0 100%;
+            max-width: none;
+            width: 100%;
+          }
+          .cc-search input { font-size: 12.5px !important; }
+          .cc-nav-actions { margin-left: auto; }
         }
       `}</style>
     </>

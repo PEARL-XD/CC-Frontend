@@ -75,7 +75,13 @@ export default function Login() {
     if (!googleReady || !googleClientId || !googleButtonRef.current || !window.google?.accounts?.id) return;
     googleButtonRef.current.innerHTML = "";
     window.google.accounts.id.initialize({ client_id: googleClientId, callback: ({ credential }) => finishSocialLogin(credential) });
-    window.google.accounts.id.renderButton(googleButtonRef.current, { theme: "outline", size: "large", width: 360, text: "continue_with" });
+    const availableWidth = googleButtonRef.current.clientWidth || window.innerWidth - 32;
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: "outline",
+      size: "large",
+      width: Math.min(360, Math.max(220, availableWidth)),
+      text: "continue_with",
+    });
   }, [finishSocialLogin, googleReady, googleClientId]);
 
   const {
@@ -118,8 +124,8 @@ export default function Login() {
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
-      <div className="h-screen w-full bg-gradient-to-br from-[#fff6e5] via-[#ffd6a5] to-[#ff8c42] overflow-hidden flex items-center justify-center p-4">
-        <div className="max-w-6xl w-full bg-white bg-opacity-90 backdrop-blur-md rounded-3xl shadow-lg border border-orange-200 grid lg:grid-cols-2">
+      <div className="min-h-[100svh] w-full overflow-y-auto bg-gradient-to-br from-[#fff6e5] via-[#ffd6a5] to-[#ff8c42] px-3 py-6 sm:p-4">
+        <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-3xl border border-orange-200 bg-white bg-opacity-90 shadow-lg backdrop-blur-md lg:grid-cols-2">
 
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -136,7 +142,7 @@ export default function Login() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            className="flex flex-col justify-center p-10"
+            className="flex min-w-0 flex-col justify-center p-5 sm:p-8 lg:p-10"
           >
             <div className="flex flex-col items-center gap-3 mb-8">
               <img src={Logo} alt="CleanChops Logo" className=" h-16 object-contain" />
@@ -229,7 +235,7 @@ export default function Login() {
               </Link>
             </p>
 
-            {googleClientId && <div className="mt-5 flex justify-center" ref={googleButtonRef} aria-label="Continue with Google" />}
+            {googleClientId && <div className="mt-5 flex w-full max-w-[360px] justify-center self-center overflow-hidden" ref={googleButtonRef} aria-label="Continue with Google" />}
 
             <p className="mt-8 text-center text-xs text-gray-400">
   By signing in you agree to our{" "}

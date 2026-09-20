@@ -162,10 +162,10 @@ export default function LegalPage() {
       </div>
 
       {/* Body: sidebar + content */}
-      <div style={{ maxWidth: "860px", margin: "0 auto", padding: "0 1.5rem", display: "grid", gridTemplateColumns: "180px 1fr", gap: "3rem", alignItems: "start" }}>
+      <div className="cc-legal-layout">
 
         {/* Sticky sidebar nav */}
-        <nav style={{ position: "sticky", top: "80px", paddingTop: "2.5rem" }}>
+        <nav className="cc-legal-nav" style={{ position: "sticky", top: "80px", paddingTop: "2.5rem" }}>
           {sections.map((s) => (
             <button
               key={s.id}
@@ -192,7 +192,7 @@ export default function LegalPage() {
         </nav>
 
         {/* Content */}
-        <div style={{ paddingTop: "2.5rem", paddingBottom: "6rem" }}>
+        <div className="cc-legal-content" style={{ paddingTop: "2.5rem", paddingBottom: "6rem" }}>
           {sections.map((s, si) => (
             <div
               key={s.id}

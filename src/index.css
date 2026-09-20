@@ -2,6 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+body {
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100%;
+  min-width: 0;
+  width: 100%;
+  overflow-x: clip;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  label,
+  button,
+  a {
+    overflow-wrap: anywhere;
+  }
+
+  input,
+  select,
+  textarea {
+    min-width: 0;
+  }
+}
+
+.cc-legal-layout {
+  width: calc(100% - 3rem);
+  max-width: 860px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .cc-legal-layout {
+    width: calc(100% - 2rem);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .cc-legal-nav {
+    position: static !important;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-top: 1rem !important;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+
+  .cc-legal-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cc-legal-nav button {
+    width: auto !important;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .cc-legal-content {
+    padding-top: 1.5rem !important;
+  }
+}
+
 @keyframes scale-in {
   0% {
     transform: scale(0.95);
