@@ -27,7 +27,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation(); // ✅ added
-  const { setAccessToken } = useContext(AuthContext);
+  const { setAccessToken, setUser } = useContext(AuthContext);
   const googleButtonRef = useRef(null);
   const [googleReady, setGoogleReady] = useState(false);
   const googleClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID;
@@ -42,14 +42,16 @@ export default function Login() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Google sign-in failed.");
+      if (!result.accessToken) throw new Error("Google sign-in did not return a session token.");
       setAccessToken(result.accessToken);
+      if (result.user) setUser(result.user);
       toast.success("Signed in with Google");
       navigate(location.state?.from || "/home", { replace: true });
     } catch (error) {
       toast.error(error.message || "Google sign-in failed.");
       console.error("Google sign-in error:", error);
     }
-  }, [location.state, navigate, setAccessToken]);
+  }, [location.state, navigate, setAccessToken, setUser]);
 
   useEffect(() => {
     document.body.classList.add("no-scroll");

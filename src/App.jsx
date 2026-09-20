@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { lazy, Suspense, useContext } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -9,25 +9,25 @@ import {
 import { AuthContext } from "./contexts/AuthContext.jsx";
 import { CartProvider } from "./contexts/CartContext.jsx";
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Home from "./pages/Home.jsx";
-import ProductDetail from "./pages/ProductDetail";
-import Cart from "./pages/Cart.jsx";
-import Profile from "./pages/Profile.jsx";
-import PaymentPage from "./pages/PaymentPage.jsx";
-import OrdersPage from "./pages/OrdersPage.jsx";
-import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
-import SupportPage from "./pages/SupportPage.jsx";
-import SupportPublicPage from "./pages/SupportPublicPage.jsx";
-import AdminSupportPage from "./pages/AdminSupportPage";
-import Legalpage from "./pages/Legalpage.jsx";
-import EditProfile from "./pages/EditProfile.jsx";
-import AdminInventoryPage from "./pages/AdminInventoryPage.jsx";
-import DownloadPage from "./pages/DownloadPage.jsx";
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Home = lazy(() => import("./pages/Home.jsx"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Cart = lazy(() => import("./pages/Cart.jsx"));
+const Profile = lazy(() => import("./pages/Profile.jsx"));
+const PaymentPage = lazy(() => import("./pages/PaymentPage.jsx"));
+const OrdersPage = lazy(() => import("./pages/OrdersPage.jsx"));
+const AdminOrdersPage = lazy(() => import("./pages/AdminOrdersPage.jsx"));
+const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
+const SupportPublicPage = lazy(() => import("./pages/SupportPublicPage.jsx"));
+const AdminSupportPage = lazy(() => import("./pages/AdminSupportPage"));
+const Legalpage = lazy(() => import("./pages/Legalpage.jsx"));
+const EditProfile = lazy(() => import("./pages/EditProfile.jsx"));
+const AdminInventoryPage = lazy(() => import("./pages/AdminInventoryPage.jsx"));
+const DownloadPage = lazy(() => import("./pages/DownloadPage.jsx"));
 import Layout from "./components/Layout";
-import CategoryPage from "./pages/CategoryPage.jsx";
-import LocationPage from "./pages/LocationPage.jsx";
+const CategoryPage = lazy(() => import("./pages/CategoryPage.jsx"));
+const LocationPage = lazy(() => import("./pages/LocationPage.jsx"));
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, loading } = useContext(AuthContext);
@@ -89,7 +89,14 @@ function App() {
   return (
     <CartProvider>
       <Router>
-        <Routes>
+        <Suspense
+          fallback={
+            <div className="grid min-h-[50vh] place-items-center bg-[#fffaf6] px-4 text-sm font-semibold text-black/55">
+              Loading CleanChops...
+            </div>
+          }
+        >
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetail />} />
@@ -182,7 +189,8 @@ function App() {
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </Router>
     </CartProvider>
   );

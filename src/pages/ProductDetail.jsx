@@ -479,7 +479,7 @@ export default function ProductDetail() {
       </main>
 
       {showToast && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-full bg-[#ef4444] px-5 py-3 text-sm font-semibold text-white shadow-lg">
+        <div className="fixed bottom-4 left-4 right-4 z-50 rounded-2xl bg-[#ef4444] px-5 py-3 text-center text-sm font-semibold text-white shadow-lg sm:bottom-6 sm:left-auto sm:right-6 sm:rounded-full">
           Item added to cart!
         </div>
       )}

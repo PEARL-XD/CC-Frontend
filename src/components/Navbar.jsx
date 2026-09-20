@@ -758,13 +758,13 @@ export default function Navbar() {
     
 
         /* Search: full width on mobile */
-        .cc-search { flex: 1; max-width: 460px; position: relative; }
+        .cc-search { flex: 1 1 320px; min-width: 0; max-width: 460px; position: relative; }
 
         /* Hide spacer on mobile so search fills the gap */
         .cc-spacer { flex: 1; }
 
-        .cc-nav-inner { width: 100%; }
-        .cc-nav-actions { flex-shrink: 0; }
+        .cc-nav-inner { width: 100%; min-width: 0; }
+        .cc-nav-actions { flex-shrink: 0; min-width: 0; }
 
         @media (max-width: 640px) {
           .cc-nav-inner {
@@ -784,6 +784,12 @@ export default function Navbar() {
           }
           .cc-search input { font-size: 12.5px !important; }
           .cc-nav-actions { margin-left: auto; }
+        }
+
+        @media (max-width: 360px) {
+          .cc-nav-inner { padding-left: 0.55rem !important; padding-right: 0.55rem !important; }
+          .cc-nav-actions { gap: 4px !important; }
+          .cc-nav-actions button { padding-left: 6px !important; padding-right: 6px !important; }
         }
       `}</style>
     </>

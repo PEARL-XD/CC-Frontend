@@ -169,7 +169,7 @@ console.log("API response:", data);
         </div>
 
         {/* Summary stats */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
          {[
   { label: "Open",      value: summary.open,     color: "text-amber-600" },
   { label: "In review", value: summary.inReview, color: "text-blue-600"  }, // ← inReview not in_review

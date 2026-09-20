@@ -26,8 +26,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const fetchUserProfile = useCallback(
-    async (tokenOverride) => {
-      const token = tokenOverride ?? accessToken;
+    async (token) => {
 
       if (!token) {
         setUser(null);
@@ -59,7 +58,7 @@ export function AuthProvider({ children }) {
         return false;
       }
     },
-    [accessToken, clearAuth]
+    [clearAuth]
   );
 
   const fetchAccessToken = useCallback(async () => {
@@ -114,7 +113,7 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    fetchUserProfile();
+    fetchUserProfile(accessToken);
   }, [accessToken, fetchUserProfile]);
 
   useEffect(() => {
