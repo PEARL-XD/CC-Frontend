@@ -173,9 +173,11 @@ export function CartProvider({ children }) {
         {},
         { headers: authHeaders() }
       );
+        return true;
     } catch (err) {
       console.error("Clear cart failed:", err);
       setCartItems(snapshot);
+        return false;
     }
   }, [authHeaders, cartItems]);
 

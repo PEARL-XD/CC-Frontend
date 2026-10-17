@@ -422,6 +422,8 @@ export default function AdminOrdersPage() {
                       <span className={`px-2 py-1 rounded-full border ${paymentClass}`}>
                         {order.paymentStatus}
                       </span>
+                      {order.paymentProvider === 'cashfree' && <div className="mt-2">Cashfree</div>}
+                      {order.refundStatus && <div className="mt-2 font-semibold">Refund: {order.refundStatus}</div>}
                     </td>
 
                     <td className="px-3 py-3 text-xs">

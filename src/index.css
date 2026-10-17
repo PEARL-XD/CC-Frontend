@@ -82,46 +82,77 @@ textarea:focus-visible {
   }
 }
 
+.cc-policy-page {
+  --policy-bg: #0d0d0d;
+  --policy-text: #c8c8c8;
+  --policy-accent: #e53935;
+  min-height: 100vh;
+  background: var(--policy-bg);
+  color: var(--policy-text);
+  font-family: "DM Sans", sans-serif;
+}
+.cc-policy-skip {
+  position: fixed;
+  left: 1rem;
+  top: -5rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: white;
+  color: #111;
+}
+.cc-policy-skip:focus { top: 1rem; }
+.cc-policy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem max(1rem, calc((100% - 1100px) / 2));
+  background: #fff;
+  color: #242424;
+}
+.cc-policy-header img { width: min(186px, 42vw); height: auto; }
+.cc-policy-header nav { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+.cc-policy-header a { font-size: 0.875rem; font-weight: 600; }
+.cc-policy-header a:hover { color: #b91c1c; }
+.cc-policy-hero { padding: clamp(2rem, 5vw, 4rem) 1rem; background: #c62828; color: white; }
+.cc-policy-hero > div { max-width: 1100px; margin: auto; }
+.cc-policy-eyebrow { font-size: 0.75rem; letter-spacing: 0.13em; text-transform: uppercase; }
+.cc-policy-hero h1 { font-family: "Playfair Display", Georgia, serif; font-size: clamp(2.25rem, 5vw, 3.75rem); line-height: 1.08; font-weight: 900; margin: 0.75rem 0 1rem; }
+.cc-policy-hero p { max-width: 640px; line-height: 1.65; }
+.cc-policy-date { margin-top: 1rem; font-size: 0.8125rem; }
 .cc-legal-layout {
-  width: calc(100% - 3rem);
-  max-width: 860px;
-  margin: 0 auto;
+  width: calc(100% - 2rem);
+  max-width: 1100px;
+  margin: auto;
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 3rem;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 4rem);
   align-items: start;
 }
-
+.cc-legal-nav { position: sticky; top: 1rem; padding: 2.5rem 0; }
+.cc-legal-nav a { display: block; padding: 0.75rem 1rem; margin-bottom: 0.25rem; border-left: 2px solid transparent; border-radius: 0.4rem; color: #bbb; font-size: 0.875rem; }
+.cc-legal-nav a:hover, .cc-legal-nav a[aria-current] { color: white; background: #281515; border-left-color: var(--policy-accent); }
+.cc-legal-content { min-width: 0; padding: 2.5rem 0 4rem; }
+.cc-legal-content section { scroll-margin-top: 1.5rem; }
+.cc-legal-content section + section { margin-top: 3.5rem; border-top: 1px solid #353535; padding-top: 2.5rem; }
+.cc-policy-section-heading { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.75rem; }
+.cc-policy-section-heading > span { color: #fca5a5; font-size: 0.875rem; }
+.cc-policy-section-heading h2 { font-family: "Playfair Display", Georgia, serif; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; line-height: 1.25; color: white; }
+.cc-policy-block + .cc-policy-block { margin-top: 1.75rem; }
+.cc-policy-block h3 { font-size: 1rem; font-weight: 700; color: #f2f2f2; margin-bottom: 0.5rem; }
+.cc-policy-block p { font-size: 0.9375rem; line-height: 1.85; }
+.cc-policy-contact-links { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 0.75rem; }
+.cc-policy-contact-links a, .cc-policy-footer a { color: #fca5a5; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.cc-policy-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem 1.5rem; border-top: 1px solid #353535; padding: 2rem 1rem; font-size: 0.875rem; }
 @media (max-width: 768px) {
-  .cc-legal-layout {
-    width: calc(100% - 2rem);
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-
-  .cc-legal-nav {
-    position: static !important;
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    padding-top: 1rem !important;
-    padding-bottom: 0.25rem;
-    scrollbar-width: none;
-  }
-
-  .cc-legal-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .cc-legal-nav button {
-    width: auto !important;
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
-
-  .cc-legal-content {
-    padding-top: 1.5rem !important;
-  }
+  .cc-legal-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .cc-legal-nav { min-width: 0; position: static; display: flex; gap: 0.5rem; overflow-x: auto; padding: 1.25rem 0 0.25rem; }
+  .cc-legal-nav a { flex: 0 0 auto; white-space: nowrap; padding: 0.75rem; }
+  .cc-legal-content { padding-top: 1.5rem; }
+  .cc-policy-section-heading { gap: 0.75rem; }
+  .cc-policy-header nav { gap: 0.75rem; }
+  .cc-policy-header a { font-size: 0.8125rem; }
 }
 
 @keyframes scale-in {

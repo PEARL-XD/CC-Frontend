@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext, useCallback, useRef } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import AuthRequired from "../components/AuthRequired";
@@ -223,6 +224,12 @@ export default function OrdersPage() {
                   ₹{order.totalAmount.toFixed(2)}
                 </span>
               </div>
+              {order.refundStatus && <p className="text-sm">Refund: {order.refundStatus}</p>}
+              {order.paymentProvider === 'cashfree' && order.paymentStatus === 'PENDING' && (
+                <Link className="inline-block rounded-xl border px-4 py-2 text-red-600" to={`/paymentpage?orderId=${encodeURIComponent(order._id)}`}>
+                  Check / continue payment
+                </Link>
+              )}
             </div>
           );
         })}

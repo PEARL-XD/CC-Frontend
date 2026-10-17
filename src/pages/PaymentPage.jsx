@@ -1,281 +1,103 @@
-import React, { useState, useEffect, useContext } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
-import { AuthContext } from "../contexts/AuthContext";
-import { useCart } from "../contexts/CartContext";
+import React, { useState, useRef, useContext } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { AuthContext } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import { loadCashfree, validateLivePayment, checkoutReference } from '../utils/cashfree';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-// Load Razorpay script once
-const loadRazorpayScript = () => {
-  if (window.Razorpay) return Promise.resolve(true);
-
-  return new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
 
 export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { accessToken, user } = useContext(AuthContext);
   const { clearCart } = useCart();
+  const [payment, setPayment] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const active = useRef(false);
+  const cartCleared = useRef(false);
+  const { cartItems = [], schedule, silentDelivery, couponCode } = location.state || {};
+  const resumeId = new URLSearchParams(location.search).get('orderId');
+  const key = `cashfree_checkout_${user?._id}`;
 
-  const [loading, setLoading] = useState(false);
+  async function request(path, data = {}) {
+    const response = await axios.post(`${API_BASE_URL}/api${path}`, data, {
+      headers: { Authorization: `Bearer ${accessToken}` }, timeout: 30000,
+    });
+    return response.data;
+  }
 
-  const { cartItems, schedule, silentDelivery } = location.state || {};
-
-  useEffect(() => {
-    if (!cartItems || cartItems.length === 0) {
-      navigate("/cart");
-    }
-  }, [cartItems, navigate]);
-
-  useEffect(() => {
-    if (!accessToken) {
-      navigate("/login");
-    }
-  }, [accessToken, navigate]);
-
-  useEffect(() => {
-    loadRazorpayScript();
-  }, []);
-
-  const markPaymentFailed = async (localOrderId, paymentStatus = "FAILED") => {
-    if (!localOrderId || !accessToken) return false;
-
+  async function proceed(openCheckout) {
+    if (active.current || !accessToken || !user?._id) return;
+    active.current = true;
+    setBusy(true);
+    setError('');
     try {
-      const res = await axios.post(
-        `${API_BASE_URL}/api/orders/payment-failed`,
-        { localOrderId, paymentStatus },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-
-      console.log("payment-failed response:", res.data);
-      return true;
-    } catch (err) {
-      console.error(
-        "Failed to mark order as payment-failed:",
-        err.response?.data || err.message
-      );
-      return false;
-    }
-  };
-
-  const goToOrdersAfterFailure = async (
-    localOrderId,
-    paymentStatus,
-    message
-  ) => {
-    await markPaymentFailed(localOrderId, paymentStatus);
-
-    if (message) {
-      alert(message);
-    }
-
-    navigate("/orderspage");
-  };
-
-  const handlePayNow = async () => {
-    try {
-      if (!accessToken) {
-        alert("Please log in again to continue.");
-        navigate("/login");
-        return;
+      let id = payment?.localOrderId || resumeId;
+      let data;
+      if (!id) {
+        if (!cartItems.length) throw new Error('Open an unpaid order from My Orders or return to your cart.');
+        const payload = {
+          cartItems: cartItems.map((item) => ({ _id: item._id, selectedSize: Number(item.selectedSize), quantity: Number(item.quantity), cutInstruction: item.cutInstruction })),
+          schedule, silentDelivery: silentDelivery === true, couponCode,
+          paymentMethod: 'ONLINE', paymentProvider: 'cashfree',
+          locationKey: user.deliveryLocation?.locationKey || '',
+        };
+        const reference = checkoutReference(localStorage, user._id, payload);
+        data = validateLivePayment(await request('/orders/create', { ...payload, requestId: reference.requestId }));
+        id = data.localOrderId;
       }
-
-      setLoading(true);
-
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        alert("Razorpay failed to load. Check your connection.");
-        setLoading(false);
-        return;
+      data = validateLivePayment(await request(`/payments/cashfree/orders/${id}/session`), id);
+      setPayment(data);
+      if (openCheckout && !data.paid && data.orderStatus !== 'CANCELLED' && data.cashfreeStatus === 'ACTIVE') {
+        const Cashfree = await loadCashfree();
+        try { await Cashfree({ mode: 'production' }).checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: '_modal' }); }
+        catch { /* A checkout error is not proof that the bank did not charge. */ }
+        data = validateLivePayment(await request(`/payments/cashfree/orders/${id}/verify`), id);
+        setPayment(data);
       }
+      if (data.paid && data.orderStatus !== 'CANCELLED' && !resumeId && !cartCleared.current) {
+        const cleared = await clearCart();
+        if (cleared === false) throw new Error('Payment confirmed. Cart refresh failed; check your orders before purchasing again.');
+        cartCleared.current = true;
+        localStorage.removeItem(key);
+      } else if (data.orderStatus === 'CANCELLED' && !resumeId) localStorage.removeItem(key);
+    } catch (e) {
+      setError(e.response?.data?.error || e.message || 'Unable to verify payment. Check your orders before paying again.');
+    } finally { active.current = false; setBusy(false); }
+  }
 
-    const orderCartItems = cartItems.map((item) => ({
-  _id: item._id,
-  selectedSize: Number(item.selectedSize),
-  quantity: Number(item.quantity),
-}));
-
-const { data } = await axios.post(
-  `${API_BASE_URL}/api/orders/create`,
-  { cartItems: orderCartItems, schedule, silentDelivery },
-  { headers: { Authorization: `Bearer ${accessToken}` } }
-);
-
-      const {
-        razorpayKeyId,
-        amount,
-        currency,
-        razorpayOrderId,
-        localOrderId,
-      } = data;
-
-      setLoading(false);
-
-      let paymentHandled = false;
-
-      const options = {
-        key: razorpayKeyId,
-        amount,
-        currency,
-        order_id: razorpayOrderId,
-        name: "CleanCuts",
-        description: "Order Payment",
-        prefill: {
-          name: user?.name || "",
-          contact: user?.phone || "",
-          email: user?.email || "",
-        },
-        modal: {
-          ondismiss: async () => {
-            if (paymentHandled) return;
-            paymentHandled = true;
-            setLoading(false);
-
-            await goToOrdersAfterFailure(
-              localOrderId,
-              "CANCELLED",
-              "Payment was cancelled."
-            );
-          },
-        },
-        handler: async function (response) {
-          if (paymentHandled) return;
-          paymentHandled = true;
-
-          try {
-            await axios.post(
-              `${API_BASE_URL}/api/orders/verify`,
-              {
-                localOrderId,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              },
-              { headers: { Authorization: `Bearer ${accessToken}` } }
-            );
-          } catch (err) {
-            console.error(
-              "Payment verification failed:",
-              err.response?.data || err.message
-            );
-
-            await goToOrdersAfterFailure(
-              localOrderId,
-              "FAILED",
-              "Payment verification failed. Please contact support."
-            );
-            return;
-          }
-
-          try {
-            await clearCart();
-          } catch (e) {
-            console.warn("Cart clear failed (safe to ignore):", e);
-          }
-
-          navigate("/orderspage");
-        },
-        theme: {
-          color: "#E53935",
-        },
-        method: {
-          upi: true,
-          card: true,
-          netbanking: true,
-          wallet: true,
-        },
-      };
-
-      const razorpayInstance = new window.Razorpay(options);
-
-      razorpayInstance.on("payment.failed", async (response) => {
-        if (paymentHandled) return;
-        paymentHandled = true;
-
-        console.error("Payment failed:", response.error);
-        setLoading(false);
-
-        await goToOrdersAfterFailure(
-          localOrderId,
-          "FAILED",
-          `Payment failed: ${
-            response.error.description ||
-            "Something went wrong. Please try again."
-          }`
-        );
-      });
-
-      razorpayInstance.open();
-    } catch (err) {
-      console.error(
-        "Payment initiation failed:",
-        err.response?.data || err.message
-      );
-alert(err.response?.data?.error || "Payment initiation failed. Try again.");
-      setLoading(false);
-    }
-  };
-
-  if (!cartItems || !accessToken) return null;
-
-  const total = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-
+  const canPay = payment && !payment.paid && payment.orderStatus !== 'CANCELLED' && payment.cashfreeStatus === 'ACTIVE';
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-extrabold mb-6">Review & Pay</h1>
-
-      <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-2">
-        {cartItems.map((item) => (
-          <div
-            key={`${item._id}-${item.selectedSize}`}
-            className="flex justify-between text-sm"
-          >
-            <span>
-              {item.name} ({item.selectedSize}g × {item.quantity})
-            </span>
-            <span>₹{(item.price * item.quantity).toFixed(2)}</span>
+    <main className="min-h-screen bg-[#fffaf5] px-4 py-8 sm:py-16">
+      <section className="mx-auto w-full max-w-xl rounded-2xl border border-orange-100 bg-white p-5 shadow-sm sm:p-8">
+        <h1 className="text-2xl font-extrabold">Secure checkout</h1>
+        <p className="mt-2 text-sm text-gray-600">Pay securely with Cashfree. This is a real payment for your order.</p>
+        {cartItems.length > 0 && <div className="my-6 space-y-3">{cartItems.map((item) => (
+          <div key={`${item._id}-${item.selectedSize}`} className="flex gap-3 justify-between text-sm">
+            <span className="min-w-0 break-words">{item.name} ({item.selectedSize}g x {item.quantity})</span>
+            <span className="shrink-0">Rs {(item.price * item.quantity).toFixed(2)}</span>
           </div>
-        ))}
-      </div>
-
-      {schedule && (
-        <p className="text-gray-600 mb-3">
-          <span className="font-semibold">Scheduled:</span> {schedule}
-        </p>
-      )}
-
-      {silentDelivery && (
-        <p className="text-gray-600 mb-3">
-          <span className="font-semibold">Delivery:</span> Silent delivery
-        </p>
-      )}
-
-      {!schedule && !silentDelivery && (
-        <p className="text-gray-600 mb-3">
-          <span className="font-semibold">Delivery:</span> Normal delivery
-        </p>
-      )}
-
-      <div className="text-xl font-bold mb-6">Total: ₹{total.toFixed(2)}</div>
-
-      <button
-        onClick={handlePayNow}
-        disabled={loading}
-        className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold shadow hover:scale-105 transition disabled:opacity-50"
-      >
-        {loading ? "Processing..." : "Pay with Razorpay"}
-      </button>
-    </div>
+        ))}</div>}
+        {payment && <div className="my-5 rounded-xl bg-orange-50 p-4 space-y-2" aria-live="polite">
+          <p className="text-xl font-bold">Total: Rs {(payment.amount / 100).toFixed(2)}</p>
+          <p>{payment.orderStatus === 'CANCELLED' ? `Order cancelled. Refund: ${payment.refundStatus || 'any completed payment will be refunded'}.`
+            : payment.paid ? 'Payment confirmed. Your order is being prepared.' : 'Payment not confirmed yet. Continue payment or check its status.'}</p>
+          <p className="break-all text-xs text-gray-500">Order reference: {payment.localOrderId}</p>
+        </div>}
+        {error && <p role="alert" className="my-4 text-sm text-red-700">{error}</p>}
+        <div className="mt-5 flex flex-col gap-3">
+          {(!payment || canPay) && <button disabled={busy || !user || (!cartItems.length && !resumeId && !payment)}
+            onClick={() => proceed(Boolean(payment))}
+            className="rounded-xl bg-red-500 px-4 py-3 font-bold text-white disabled:bg-gray-300 disabled:cursor-not-allowed">
+            {busy ? 'Please wait...' : payment ? 'Pay with Cashfree' : 'Review final total'}
+          </button>}
+          {(payment || resumeId) && <button disabled={busy} onClick={() => proceed(false)} className="rounded-xl border px-4 py-3 disabled:opacity-50">Check payment status</button>}
+          <button disabled={busy} onClick={() => navigate('/orderspage')} className="py-3 text-red-600 disabled:opacity-50">View my orders</button>
+          <button disabled={busy} onClick={() => navigate('/cart')} className="py-2 text-gray-600 disabled:opacity-50">Back to cart</button>
+        </div>
+      </section>
+    </main>
   );
 }

@@ -136,10 +136,11 @@ const quickLinks = [
 
 const companyLinks = [
   { label: "About Us",         path: "/info" },
-  { label: "Delivery Policy",  path: "/info#delivery" },
-  { label: "Privacy Policy",   path: "/info#privacy" },
-  { label: "Terms of Use",     path: "/info#terms" },
-  { label: "Contact",          path: "/support" },
+  { label: "Shipping & Delivery", path: "/shipping-delivery-policy" },
+  { label: "Privacy Policy", path: "/privacy-policy" },
+  { label: "Terms & Conditions", path: "/terms-and-conditions" },
+  { label: "Cancellation & Refunds", path: "/refund-cancellation-policy" },
+  { label: "Contact Us", path: "/contact-us" },
 ];
 
 export function Footer() {

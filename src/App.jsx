@@ -26,6 +26,8 @@ const EditProfile = lazy(() => import("./pages/EditProfile.jsx"));
 const AdminInventoryPage = lazy(() => import("./pages/AdminInventoryPage.jsx"));
 const DownloadPage = lazy(() => import("./pages/DownloadPage.jsx"));
 import Layout from "./components/Layout";
+import SessionGate from "./components/SessionGate.jsx";
+import { publicPolicyRoutes } from "./data/policyRoutes.js";
 const CategoryPage = lazy(() => import("./pages/CategoryPage.jsx"));
 const LocationPage = lazy(() => import("./pages/LocationPage.jsx"));
 
@@ -82,13 +84,10 @@ const SupportRoute = () => {
 };
 
 function App() {
-  const { loading } = useContext(AuthContext);
-
-  if (loading) return <div>Loading...</div>;
-
   return (
     <CartProvider>
       <Router>
+        <SessionGate>
         <Suspense
           fallback={
             <div className="grid min-h-[50vh] place-items-center bg-[#fffaf6] px-4 text-sm font-semibold text-black/55">
@@ -111,7 +110,9 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/info" element={<Legalpage />} />
+          {Object.keys(publicPolicyRoutes).map((path) => (
+            <Route key={path} path={path} element={<Legalpage />} />
+          ))}
           <Route path="/download" element={<DownloadPage />} />
           <Route
             path="/category/:categorySlug"
@@ -191,6 +192,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </SessionGate>
       </Router>
     </CartProvider>
   );

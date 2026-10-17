@@ -241,9 +241,9 @@ export default function Login() {
 
             <p className="mt-8 text-center text-xs text-gray-400">
   By signing in you agree to our{" "}
-  <Link to="/info" className="underline hover:text-gray-600">
-    Terms & Privacy
-  </Link>.
+  <Link to="/terms-and-conditions" className="underline hover:text-gray-600">Terms</Link>
+  {" and "}<Link to="/privacy-policy" className="underline hover:text-gray-600">Privacy Policy</Link>.
+  {" "}<Link to="/refund-cancellation-policy" className="underline hover:text-gray-600">Cancellation & Refunds</Link>
 </p>
           </motion.div>
 
