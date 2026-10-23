@@ -4,6 +4,7 @@ import axios from 'axios';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { loadCashfree, validateLivePayment, checkoutReference } from '../utils/cashfree';
+import { reportCheckoutPurchase } from '../utils/googleAds';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -25,6 +26,7 @@ export default function PaymentPage() {
     const response = await axios.post(`${API_BASE_URL}/api${path}`, data, {
       headers: { Authorization: `Bearer ${accessToken}` }, timeout: 30000,
     });
+    reportCheckoutPurchase(path, response.data, data);
     return response.data;
   }
 

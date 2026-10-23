@@ -24,18 +24,42 @@ visitor choice, persistence, revocation and consent updates before enabling it.
 Review the public privacy disclosure and business consent requirements before
 publishing. Consent mode alone does not establish legal compliance.
 
-## Purchases are not configured yet
+## Purchase events
 
-The base tag is not a purchase conversion. No conversion events are emitted and
-no purchase conversion label has been supplied. Obtain the Purchase conversion
-event snippet from this Google Ads account before implementing that event.
-Do not mark payment-page visits, order-history visits, gateway launches or
-unverified client callbacks as purchases.
+The owner supplied the Purchase action on 23 October 2026. Its visible Google
+Ads details were read directly to confirm the exact, case-sensitive label:
 
-Future purchase measurement must use the backend-confirmed order result, the
-correct INR amount and a stable transaction/order ID to avoid duplicate counts.
-Decide separately whether confirmed COD orders count. Website installation does
-not track purchases made inside the native Android/iOS apps.
+- Conversion ID: `18474051740`
+- Conversion label: `25hhCMi89YQdEJzRjulE`
+- Destination: `AW-18474051740/25hhCMi89YQdEJzRjulE`
+
+`src/utils/googleAds.js` observes successful checkout API responses from
+`PaymentPage`. A production Cashfree order must be backend-confirmed as PAID,
+have a valid matching order ID and INR amount, and be CONFIRMED, PACKED,
+OUT_FOR_DELIVERY or DELIVERED without a refund. Session retrieval, payment
+verification and an idempotent creation retry can confirm the same purchase.
+Gateway callbacks alone, pending/failed payments and cancelled/refunded orders
+do not count. Opening a payment or order-history page never counts.
+
+The owner chose to include successfully placed COD orders. The reporter also
+accepts a successful `/orders/create` response only when both the request and
+response explicitly identify COD and no online payment is required. This does
+not change the order's PENDING payment state or claim cash was collected.
+The current React payment UI only creates ONLINE/Cashfree orders; no COD choice
+is added by this tracking patch. COD response handling is ready for a future
+web COD flow, but it does not track native-app COD orders or backfill old orders.
+
+Events contain only destination, order ID, server amount converted from paise
+to INR, and currency. Per-tab deduplication is bounded at 256 orders and uses no
+advertising cookies or persistent storage. Reloads/tabs can send the same ID
+again; Google Ads deduplicates the Purchase action by `transaction_id`.
+Queuing is not proof that Google received or attributed an event. Blockers,
+network failures and consent restrictions can limit measurement.
+
+Reporting failures are caught and never delay checkout, change payment status,
+or prevent cart cleanup. Native Android/iOS purchase analytics, cross-device
+attribution and refund conversion adjustments are separate work, not enabled
+by installing the website tag.
 
 ## Deployment and verification
 
@@ -44,13 +68,19 @@ not track purchases made inside the native Android/iOS apps.
 3. Use Google Ads **Test connection**, or connect Google Tag Assistant to the site.
 4. Confirm `AW-18474051740` is detected and the four consent defaults are denied.
 5. Confirm home, login and checkout still work if the Google tag request is blocked.
+6. With Tag Assistant connected, complete an authorised website test purchase.
+   Verify one Purchase event with the exact destination, actual INR value and
+   order ID. Checking the same order again must not queue another event in the
+   same tab. Do not submit fake conversion events to the production account.
+7. Confirm cancelling checkout and checking unpaid/cancelled orders do not emit
+   a purchase. Test live detection and attribution separately from local mocks.
 
 A successful local build is not proof of live detection. Google Ads diagnostics
-may need time to refresh; conversion setup can remain incomplete until its event
-is configured and verified. This change requires a website deployment, not an
-App Store or Play Store release.
+may need time to refresh; deployment and verification are still required. This
+change requires a website deployment, not an App Store or Play Store release.
 
 References:
 - https://developers.google.com/tag-platform/gtagjs
 - https://developers.google.com/tag-platform/security/guides/consent
 - https://developers.google.com/tag-platform/devguides/conversions
+- https://support.google.com/google-ads/answer/6386790
