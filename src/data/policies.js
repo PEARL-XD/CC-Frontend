@@ -1,4 +1,4 @@
-export const policyUpdatedAt = "17 October 2026";
+export const policyUpdatedAt = "23 October 2026";
 export const policyBusiness = {
   name: "CleanChops",
   operator: "PEARL",
@@ -48,6 +48,13 @@ export const policySections = [
       },
       { heading: "Service providers and data sharing", body: "We share the information needed to deliver your order with authorised fulfilment or delivery personnel. We also use service providers for maps and location selection, sign-in, payment processing, hosting and notifications. They receive information needed for those services under their applicable policies. Information may also be disclosed where required by law or to investigate fraud and protect customers." },
       { heading: "Cookies, local storage and notification choices", body: "Our website uses cookies and browser storage for sign-in, session continuity and checkout recovery. Blocking or clearing this storage may sign you out or affect checkout. Notification permissions can be changed in your device or browser settings; available notification preferences can also be managed within the app." },
+      {
+        heading: "Google advertising measurement on our website",
+        body: "Our website uses a Google tag to measure advertising performance. Advertising and analytics cookie storage, advertising user-data consent and personalised advertising are denied by default in this setup. Google may still receive limited cookieless measurement signals, such as page information, timestamps and technical browser or device information. This tag is separate from the storage needed for sign-in and checkout. We do not include your name, email, mobile number, delivery address or payment credentials in our tag configuration.",
+        links: [
+          { label: "How Google uses information from sites and apps", href: "https://policies.google.com/technologies/partner-sites" },
+        ],
+      },
       { heading: "Retention, correction and deletion", body: "You can update your profile and saved addresses in the app or website. You may request access, correction or deletion by emailing supportcleanchops@gmail.com. Account deletion is also available in the app's Profile section. We may retain order, payment and related records where needed for legal obligations, accounting, refunds, disputes or fraud prevention, even after account deletion. We verify requests before changing or disclosing account information." },
       { heading: "Privacy enquiries and policy updates", body: "For privacy questions or concerns, contact supportcleanchops@gmail.com or call +91 7678673823. We may update this policy as our services change; the last-updated date appears on this page." },
     ],

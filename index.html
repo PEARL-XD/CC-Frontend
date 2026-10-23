@@ -2,6 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Google Ads base tag. Purchase conversions are configured separately. -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { window.dataLayer.push(arguments); }
+      gtag('consent', 'default', {
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied'
+      });
+      gtag('set', 'ads_data_redaction', true);
+      gtag('js', new Date());
+      gtag('config', 'AW-18474051740', {
+        allow_ad_personalization_signals: false
+      });
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18474051740"></script>
     <link rel="icon" type="image/svg+xml" href="/favico.png" />
      <!-- <link rel="icon" href="/favicon.ico" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
