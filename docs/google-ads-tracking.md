@@ -45,9 +45,14 @@ The owner chose to include successfully placed COD orders. The reporter also
 accepts a successful `/orders/create` response only when both the request and
 response explicitly identify COD and no online payment is required. This does
 not change the order's PENDING payment state or claim cash was collected.
-The current React payment UI only creates ONLINE/Cashfree orders; no COD choice
-is added by this tracking patch. COD response handling is ready for a future
-web COD flow, but it does not track native-app COD orders or backfill old orders.
+The React checkout now offers COD, except with silent delivery. Its successful
+placement uses this same reporter. It does not track native-app COD orders or
+backfill old orders.
+
+The alternative Razorpay flow reports a purchase only after `/orders/verify`
+returns a successful, matching PAID backend order with the expected amount,
+an accepted order status, and no refund. The checkout must use a live Razorpay
+key. SDK callbacks, test keys and order-history responses do not count.
 
 Events contain only destination, order ID, server amount converted from paise
 to INR, and currency. Per-tab deduplication is bounded at 256 orders and uses no

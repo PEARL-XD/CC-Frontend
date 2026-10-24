@@ -94,6 +94,23 @@ test('successful COD creation counts at placement, without claiming it has been 
   assert.equal('paid' in calls[0][2], false);
 });
 
+test('restored Razorpay checkout counts only a matching live server-verified payment', () => {
+  const checkoutOrder = { localOrderId: id, amount: 800, currency: 'INR', razorpayOrderId: 'order_fixture', razorpayKeyId: 'rzp_live_fixture' };
+  const body = { localOrderId: id, razorpay_order_id: 'order_fixture', checkoutOrder };
+  const verified = { success: true, order: { _id: id, totalAmount: 8, razorpayOrderId: 'order_fixture', paymentMethod: 'ONLINE', paymentStatus: 'PAID', orderStatus: 'CONFIRMED' } };
+  const { report, calls } = setup();
+  assert.equal(report('/orders/verify', verified, body), true);
+  assert.equal(report('/orders/verify', verified, body), false);
+  assert.equal(calls[0][2].value, 8);
+  assert.equal(calls[0][2].transaction_id, id);
+  assert.equal(setup().report('/orders/verify', verified, { ...body, checkoutOrder: { ...checkoutOrder, razorpayKeyId: 'rzp_test_fixture' } }), false);
+  assert.equal(setup().report('/orders/verify', verified, { ...body, localOrderId: secondId }), false);
+  assert.equal(setup().report('/orders/verify', verified, { ...body, razorpay_order_id: 'order_other' }), false);
+  for (const changes of [{ paymentStatus: 'PENDING' }, { orderStatus: 'CANCELLED' }, { totalAmount: 9 }, { refundStatus: 'SUCCESS' }, { _id: secondId }]) {
+    assert.equal(setup().report('/orders/verify', { ...verified, order: { ...verified.order, ...changes } }, body), false);
+  }
+});
+
 test('failed COD creation, wrong request method, invalid amount and cancellations cannot count', () => {
   for (const changes of [{ success: false }, { success: undefined }, { paymentMethod: 'ONLINE' },
     { requiresPayment: true }, { amount: 0 }, { amount: '800' }, { currency: 'USD' },
