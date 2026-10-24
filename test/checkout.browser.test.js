@@ -96,6 +96,7 @@ async function checkout(config = {}) {
     return respond({});
   });
   await page.goto(`${baseURL}/cart`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Decline optional', exact: true }).click();
   await page.getByRole('button', { name: 'Checkout', exact: true }).waitFor();
   if (config.silent) await page.getByRole('button', { name: 'Silent delivery', exact: true }).click();
   await page.getByRole('button', { name: 'Checkout', exact: true }).click();

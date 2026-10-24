@@ -1,4 +1,4 @@
-export const policyUpdatedAt = "23 October 2026";
+export const policyUpdatedAt = "24 October 2026";
 export const policyBusiness = {
   name: "CleanChops",
   operator: "PEARL",
@@ -50,7 +50,7 @@ export const policySections = [
       { heading: "Cookies, local storage and notification choices", body: "Our website uses cookies and browser storage for sign-in, session continuity and checkout recovery. Blocking or clearing this storage may sign you out or affect checkout. Notification permissions can be changed in your device or browser settings; available notification preferences can also be managed within the app." },
       {
         heading: "Google advertising measurement on our website",
-        body: "Our website uses a Google tag to measure advertising performance. Advertising and analytics cookie storage, advertising user-data consent and personalised advertising are denied by default in this setup. Google may still receive limited cookieless measurement signals, such as page information, timestamps and technical browser or device information. For a successfully confirmed website purchase, measurement includes the order reference, order value and currency. Confirmed online payments and successfully placed cash-on-delivery orders qualify where those checkout options are available. This tag is separate from the storage needed for sign-in and checkout. We do not include your name, email, mobile number, delivery address or payment credentials in our tag configuration or purchase event.",
+        body: "Our website uses a Google tag to measure advertising performance. Advertising storage and advertising user-data consent are denied by default. If you choose Allow measurement, Google can use advertising cookies and advertising data for measurement. Analytics cookie storage and personalised advertising remain denied, even when you allow measurement. Declining does not prevent shopping. We store only your measurement choice and its timestamp in browser storage for up to 180 days; you can change or withdraw it using Privacy choices at the bottom of any page. When consent is denied, Google may still receive limited cookieless measurement signals, such as page information, timestamps and technical browser or device information. For a successfully confirmed website purchase, measurement includes the order reference, order value and currency. Confirmed online payments and successfully placed cash-on-delivery orders qualify where those checkout options are available. This tag is separate from the storage needed for sign-in and checkout. We do not include your name, email, mobile number, delivery address or payment credentials in our tag configuration or purchase event.",
         links: [
           { label: "How Google uses information from sites and apps", href: "https://policies.google.com/technologies/partner-sites" },
         ],

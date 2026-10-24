@@ -54,7 +54,7 @@ export default function LegalPage() {
           <p className="cc-policy-eyebrow">CleanChops / Customer information</p>
           <h1>Policies &amp;<br />Information</h1>
           <p>For our website, Android app and iOS app. Available to everyone, without signing in.</p>
-          <p className="cc-policy-date">Last updated: <time dateTime="2026-10-17">{policyUpdatedAt}</time></p>
+          <p className="cc-policy-date">Last updated: <time dateTime="2026-10-24">{policyUpdatedAt}</time></p>
         </div>
       </div>
       <div className="cc-legal-layout">

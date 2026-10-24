@@ -12,6 +12,52 @@
         ad_user_data: 'denied',
         ad_personalization: 'denied'
       });
+      // Restore only an explicit, unexpired visitor choice before configuring the tag.
+      (function () {
+        var storageKey = 'cleanchops_ad_measurement_v1';
+        var maxAge = 180 * 24 * 60 * 60 * 1000;
+        function readStoredChoice() {
+          try {
+            var saved = JSON.parse(window.localStorage.getItem(storageKey));
+            var age = Date.now() - saved.updatedAt;
+            if (saved.version === 1 && typeof saved.allowed === 'boolean' &&
+                Number.isSafeInteger(saved.updatedAt) && age >= 0 && age < maxAge) {
+              return saved.allowed;
+            }
+          } catch { /* Unavailable storage must never imply consent. */ }
+          return null;
+        }
+        var choice = readStoredChoice();
+        function applyChoice() {
+          gtag('consent', 'update', {
+            ad_storage: choice === true ? 'granted' : 'denied',
+            ad_user_data: choice === true ? 'granted' : 'denied',
+            analytics_storage: 'denied',
+            ad_personalization: 'denied'
+          });
+        }
+        window.cleanChopsConsent = {
+          storageKey: storageKey,
+          read: function () { return choice; },
+          choose: function (allowed) {
+            if (typeof allowed !== 'boolean') return choice;
+            choice = allowed;
+            applyChoice();
+            try {
+              window.localStorage.setItem(storageKey, JSON.stringify({
+                version: 1, allowed: allowed, updatedAt: Date.now()
+              }));
+            } catch { /* Keep the choice for this page when storage is blocked. */ }
+            return choice;
+          },
+          restore: function () {
+            choice = readStoredChoice();
+            applyChoice();
+            return choice;
+          }
+        };
+        if (choice !== null) applyChoice();
+      })();
       gtag('set', 'ads_data_redaction', true);
       gtag('js', new Date());
       gtag('config', 'AW-18474051740', {
